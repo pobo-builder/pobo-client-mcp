@@ -1,7 +1,7 @@
 {
     "name": "pobo-builder",
     "metadata": {
-        "description": "Official Pobo Page Builder plugins for Claude Code — AI styling of Pobo Page Builder widgets, blog authoring, product labeling, product status confirmation, AI generation prompt management and diagnostics of generated descriptions on your e-shop."
+        "description": "Official Pobo Page Builder plugins for Claude Code — AI styling of Pobo Page Builder widgets, blog authoring, product labeling, product status confirmation, AI generation prompt management, diagnostics of generated descriptions and bulk white label content editing on your e-shop."
     },
     "owner": {
         "name": "Pobo Page Builder",
@@ -11,7 +11,7 @@
         {
             "name": "pobo",
             "source": "./",
-            "description": "Pobo Page Builder tools for Claude — AI styling of widgets, blog article authoring, product labeling from client-supplied lists, product status confirmation (draft/ready), AI generation prompt management with free previews, and diagnostics for generated descriptions, through the Pobo MCP server."
+            "description": "Pobo Page Builder tools for Claude — AI styling of widgets, blog article authoring, product labeling from client-supplied lists, product status confirmation (draft/ready), AI generation prompt management with free previews, diagnostics for generated descriptions, and bulk editing of white label entity content with full undo, through the Pobo MCP server."
         }
     ]
 }

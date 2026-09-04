@@ -113,6 +113,19 @@ and runs a quality check for empty slots at the end. Pobo's own server-side
 generator is available too when you want it; Claude always says up front which
 one it is using and what it costs.
 
+Or, on a white label e-shop, change content across a batch of your own entities:
+
+> Ke všem pěti produktům z té vánoční akce přidej widget s informací o dopravě
+> do Štědrého dne.
+
+Claude finds the entities, picks one widget template from your catalog and puts
+the same text on all of them — or a different text on each, when that is what you
+need. It can also find entities by what is written **inside** their widgets ("kde
+se ještě píše o starém termínu dodání"), rewrite that text everywhere at once, or
+copy content from one product to others. Removing asks twice: the first call only
+shows what would go. Every batch comes back with a `batch_id`, so one call takes
+the whole run back if you change your mind.
+
 ### Filtering products
 
 Claude can filter products with the same filters as the Pobo Page Builder admin
@@ -138,6 +151,7 @@ the admin grid, so you can verify the result visually.
 - `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
 - `skills/diagnose-content/` — the workflow for finding out why a generated description is missing something
 - `skills/product-analytics/` — the workflow for reading how a description performs after it went live
+- `skills/white-label-content/` — the workflow for white label e-shops: finding entities and editing their widget content in bulk
 
 The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
 command above (OAuth login in the browser), not bundled in the plugin.
