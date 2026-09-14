@@ -116,10 +116,14 @@ Rules:
 - **Always produce the complete SCSS file.** A push replaces the entire previous
   content — never generate an incremental diff. When iterating, re-emit everything.
 - **Never generate:** `@import`, `expression(`, `javascript:`, `vbscript:`,
-  `behavior:`, `-moz-binding`, or any external `url(...)` (anything with a scheme or
-  `//host/`). Only relative/local URLs are allowed. The server rejects these (the
-  blacklist also catches CSS-escape obfuscation), so don't produce them in the first
-  place. For fonts, set font-family variables to font names — never `@import` a font.
+  `behavior:`, `-moz-binding`. For `url(...)`, only these are accepted: a
+  relative/local path, an absolute `https://` URL on the Pobo CDN or the
+  platform's own asset CDN (`cdn.myshoptet.com`, `cdn.shopify.com`), or a
+  `data:image/...` URI (png/jpeg/gif/webp/avif/svg+xml). Any other origin, any
+  protocol-relative `//host/...` URL, or a non-image `data:` URI is rejected.
+  The server rejects all of this (the blacklist also catches CSS-escape
+  obfuscation), so don't produce it in the first place. For fonts, set
+  font-family variables to font names — never `@import` a font.
 - CSS only — no JavaScript assets, no widget/content management (out of scope).
 - Max 256 KB of SCSS.
 

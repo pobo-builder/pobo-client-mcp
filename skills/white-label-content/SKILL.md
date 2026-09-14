@@ -82,6 +82,14 @@ products end up looking like five different shops.
 not one `add_entity_widget` call with five items — check `item_count` in the
 catalog before you assume otherwise.
 
+**A repeatable widget's values go under `content.item`** (singular), an array
+of `{role: value}` objects — one entry per item, and the array length must
+equal `item_count` from the catalog exactly. This applies to `add_entity_widget`,
+`edit_entity_widget`, and the per-widget `content` in `compose_entity_content`
+and `fill_design_content`. Do not use `items` (plural) — that is the
+`write-blog` skill's shape for its own tools, not this one's; sending it here
+is silently ignored, because it is not a role name.
+
 The text you send is written into **every language** the e-shop has. Per-language
 wording is not possible here; if the merchant needs it, that is admin work.
 
@@ -132,7 +140,11 @@ you last stored a copy — a stored copy is a snapshot, not the live truth.
 - `widget_id` — **every instance of that template** across the whole batch. This
   is the one for "write this into every widget…".
 
-Only the roles you send change; images, other roles and the structure survive.
+Only the roles, images and icons you send change; anything you don't send and
+the structure survive. Images and icons are changed with `image`/`icon`, keyed
+by the slot index `get_entity_content` reports — `url` and `alt` are
+independent, so you can set `alt` alone without replacing the photo; icons
+take `alt` only.
 
 `remove_entity_widget` picks widgets by instance, by template, or by `query` —
 the text inside them. **The first call removes nothing.** It answers with how
@@ -192,11 +204,15 @@ undoing fifty entities by hand — and if it is lost, `list_entity_batch` finds 
   tools (`add_entity_widget` and friends require an entity that already
   exists).
 - Widget template not in the catalog — re-run `get_entity_widget_catalog`.
-- `At most N characters…` — the limit comes from the template, not from Pobo's
-  taste; shorten the text, do not switch template to dodge it.
-- `Nothing was written — no role you sent exists in that widget.` — you used a
-  role from a different template; read `get_entity_content` for what that widget
-  actually has.
+- `At most N characters…` — a **hard** cap (65,000 characters) unrelated to the
+  template; shorten the text, there is no way around it. Separately, if a
+  response includes a `warning` about a role's length, the text **was
+  written** — the template's own `max_length` is advisory, not enforced, and
+  the warning only means the block may not look right. Relay that warning to
+  the merchant instead of assuming the write failed.
+- `Nothing was written — nothing you sent exists in that widget. Read
+  get_entity_content.` — you used a role from a different template; read
+  `get_entity_content` for what that widget actually has.
 - 401 — see Prerequisites & auth above.
 
 ## Out of scope

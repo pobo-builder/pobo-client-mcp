@@ -131,9 +131,12 @@ sees on screen there; the English meaning follows in parentheses:
 
 When the user names a category ("drafts in Massage Tools"), resolve the name
 to an id first with `list_category` (`query` full-text search; returns id,
-name, url, status, has_content, product_count and takes the same `filter`
-values), then pass the id to `list_product` via `category_id`. If the name
-matches several categories, present them and let the user choose.
+name, url, status, has_content, product_count), then pass the id to
+`list_product` via `category_id`. `list_category` takes a narrower `filter`
+set than `list_product` — `all`, `without_description`, `edited`, `favourite`,
+`waiting_for_approval`, `recently_edited` only (no `most_visited` /
+`most_added_to_cart`, which don't apply to categories). If the name matches
+several categories, present them and let the user choose.
 
 Response: `{"product": [{id, name, code, url, status, is_visible,
 is_favourite, has_content}], "total", "page", "limit"}`. Always page through

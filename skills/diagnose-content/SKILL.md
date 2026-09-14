@@ -100,18 +100,24 @@ about the product in general.
 - A run with `failed_at` set is **dead** — it is never retried, so its products
   stayed unexported. The content is fine; the export needs re-running from the
   Pobo admin.
-- `accepts_new_export: false` means an export is still in flight; wait for it.
+- `accepts_new_export: false` means the eshop has at least one export row that
+  never completed — it does **not** by itself mean one is still running. Check
+  the most recent row in `export`: if it has `failed_at` set, it is the dead
+  run above and the fix is re-running the export, not waiting. Only when the
+  latest row has no `failed_at` and `is_running: true` is it genuinely still
+  in flight and worth waiting for.
 - No recent export at all, and the product is `ready` → nobody started one.
 
 ## Reading the states honestly
 
-These four are misread constantly. Never guess at them and never soften them
+These are misread constantly. Never guess at them and never soften them
 into "something went wrong".
 
 | Signal | What it actually means |
 |---|---|
 | `is_complete: false`, `skip_reason: null` | The run is **stuck or still queued** — NOT failed. |
-| `skip_reason` set | The run was deliberately skipped; the reason says why. |
+| `is_complete: false`, `skip_reason` set | The run **died** — a crash, a deleted design/product mid-run, or the queue gave up after retries. It will never complete on its own; read `skip_reason` for what happened and start a fresh generation from the Pobo admin. |
+| `is_complete: true`, `skip_reason` set | The run finished cleanly but was **deliberately skipped** by a business rule (e.g. `only_ai` image mode with no platform photo) — the reason says why, and nothing needs retrying by itself. |
 | `research_status.reason: "no_ean"` | Research **never ran** — the product has no EAN to search by. It did not run and find nothing. |
 | `research_status.reason: "no_data"` | Research ran and came back empty. |
 

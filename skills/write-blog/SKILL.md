@@ -57,8 +57,10 @@ an error.
 ### 2. Plan the article before writing into it
 
 Sketch the structure first — intro, sections, comparison, FAQ, closing — and map
-each part onto a widget role from the catalog. Respect `max_length`: the slot
-limits are real, and copy written to overflow them gets cut, not reflowed.
+each part onto a widget role from the catalog. `max_length` is a hint for how
+much text the block was designed to hold — nothing on this path enforces it. A
+value you overflow is written in full and can break the block's layout, with no
+error or warning back to you. Keep copy inside `max_length` yourself.
 
 ### 3. Write and place
 
@@ -85,8 +87,9 @@ wrong widget.
 - `remove_blog_widget` deletes one — destructive, so confirm with the user first.
 - `update_blog_title` overwrites the title and SEO title together.
 - `add_blog_product_carousel` inserts **real products** from the shop, addressed
-  by `product_id[]` and/or `product_url[]`. Prefer this over writing product
-  names into prose — the carousel stays correct when prices and stock change.
+  by `product_id[]` and/or `product_url[]` (at most 10 each). Prefer this over
+  writing product names into prose — the carousel stays correct when prices and
+  stock change.
 - `set_blog_widget_image` fills an image slot; `convert_blog_widget` turns a
   text widget into an image+text layout, keeping the texts verbatim.
 
@@ -113,9 +116,9 @@ an unfilled role renders as a gap on the live page.
 ## Workflow — server-side generation
 
 `generate_blog_article` takes the brief and the shape of the article: `brief`,
-`normpages` (length), `structure_mode` + `design_id`, `photo_source`,
-`image_count`, `product_id`/`product_url`, `inspiration_url`, `tone`,
-`remove_exist_widget`, `lang`.
+`normpages` (length, 1-10), `structure_mode` + `design_id`, `photo_source`,
+`image_count` (0-10), `product_id`/`product_url` (at most 10 each),
+`inspiration_url` (at most 3), `tone`, `remove_exist_widget`, `lang`.
 
 - **`photo_source: "ai"` requires `image_count`** — the quote has to be
   deterministic — and `cost_confirmed: true`. The quote is `1 + image_count × 2`.

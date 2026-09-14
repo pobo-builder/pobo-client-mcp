@@ -100,13 +100,21 @@ the matching widget of the design and write one focused instruction per widget.
 
 `preview_generation` dry-runs the prompt against 1–3 real products **without
 writing anything and without spending credits** — no widgets, no images, no
-generation history row. This is how you find out whether an edit actually
-produced better copy; guessing from the prompt text alone does not.
+generation history row. This is how you find out whether an edit to the
+general prompt actually produced better copy; guessing from the prompt text
+alone does not.
+
+**It does not test per-widget instructions.** `preview_generation` only
+exercises the general `prompt` text and the generation settings below — it
+never applies the instructions set via `set_widget_prompt`, even if the
+profile already has some saved. There is no tool that previews per-widget
+instructions; judge their wording by re-reading it, not by previewing it.
 
 - Pass `eshop_id`, `design_id`, `product_id` (1–3, from `find_product` or
   `list_product`) and the `prompt` text you are testing. Optional generation
   settings mirror the admin: `paragraph_length`, `generate_seo_meta`,
-  `generate_entity_name`, `use_ai_profile`, `use_serp_context`,
+  `generate_entity_name`, `generate_short_description`
+  (`never`/`when_missing`/`always`), `use_ai_profile`, `use_serp_context`,
   `use_web_research`, `search_web`, `search_model`.
 - It returns one token per product. Poll them with `get_preview_status` —
   status `pending` until the queue picks the job up, then `complete` with the
@@ -143,7 +151,9 @@ Summarize for the user:
   (keep a copy of the state you read in step 1). They have no server-side
   history.
 - Whole profile: `delete_prompt` removes it from the e-shop (confirm with the
-  user first — this also deletes its per-widget instructions).
+  user first). If no other e-shop uses the same profile it is deleted
+  outright, together with its per-widget instructions; the response's `action`
+  field says `deleted` vs `detached`.
 
 ## Error handling
 
