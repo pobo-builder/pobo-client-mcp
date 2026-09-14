@@ -19,10 +19,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -68,7 +68,7 @@ client's list and flag anything suspicious to the user.
 
 Call `list_label` first — the user may already have one. If the user named a
 label, use it; otherwise propose a descriptive name (client/brand + purpose +
-month, e.g. "Sportrec úprava 07/2026") and confirm with the user. Create it with
+month, e.g. "Sportrec update 07/2026") and confirm with the user. Create it with
 `create_label` — it is idempotent by name (`action: created | existing`), so a
 retry or an admin-created label of the same name never duplicates.
 

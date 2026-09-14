@@ -90,7 +90,7 @@ you can remove them at any time.
 Or hand Claude a product list from a client:
 
 > Here is the client's xlsx with the products to rewrite — label them
-> "Sportrec úprava 07/2026" in Pobo.
+> "Sportrec update 07/2026" in Pobo.
 
 Claude resolves the products (URLs, EANs, codes, or names), creates the label, and
 attaches it — ambiguous or unmatched items are reported back instead of guessed.
@@ -111,7 +111,7 @@ Page Builder admin as usual.
 
 Or confirm a finished batch:
 
-> The client approved the new descriptions — mark the "Sportrec úprava 07/2026"
+> The client approved the new descriptions — mark the "Sportrec update 07/2026"
 > batch as ready for export.
 
 Claude switches the products from `draft` to `ready` (or back to `draft` when
@@ -120,7 +120,8 @@ currently in review or AI generation are reported and skipped, never overridden.
 
 Or ask why a description came out wrong:
 
-> V popisku toho krmiva chybí dávkování, přitom je na stránce výrobce. Proč?
+> The dosage is missing from that pet food description, even though it's
+> right there on the manufacturer's page. Why?
 
 Claude works through the three places it can fail — was it in the instruction,
 did the web research find it, and did the content get exported — and tells you
@@ -129,8 +130,8 @@ never found it" need completely different fixes, and one of them is not yours.
 
 Or have Claude write a blog article:
 
-> Napiš článek o výběru zimních pneumatik, tak na tři normostrany, a vlož do něj
-> naše čtyři nejprodávanější modely.
+> Write an article about choosing winter tires, about three pages long, and
+> place our four best-selling models into it.
 
 Claude composes the article itself from your widget templates — free, no credits
 — places real products as a carousel rather than writing their names into prose,
@@ -140,13 +141,13 @@ one it is using and what it costs.
 
 Or, on a white label e-shop, change content across a batch of your own entities:
 
-> Ke všem pěti produktům z té vánoční akce přidej widget s informací o dopravě
-> do Štědrého dne.
+> Add a widget with Christmas Eve delivery information to all five products
+> from that holiday promotion.
 
 Claude finds the entities, picks one widget template from your catalog and puts
 the same text on all of them — or a different text on each, when that is what you
-need. It can also find entities by what is written **inside** their widgets ("kde
-se ještě píše o starém termínu dodání"), rewrite that text everywhere at once, or
+need. It can also find entities by what is written **inside** their widgets
+("where we still mention the old delivery date"), rewrite that text everywhere at once, or
 copy content from one product to others. Removing asks twice: the first call only
 shows what would go. Every batch comes back with a `batch_id`, so one call takes
 the whole run back if you change your mind.
@@ -160,7 +161,7 @@ Pobo / favourites / waiting for approval), **full-text search**, **category**,
 add-to-cart stats. Categories are searchable by name the same way, so "drafts
 in the Massage category" needs no ids from you. So requests like
 
-> Switch everything with the "Sportrec úprava 07/2026" label that waits for
+> Switch everything with the "Sportrec update 07/2026" label that waits for
 > approval to ready.
 
 work without pasting any product list — Claude filters the batch itself and

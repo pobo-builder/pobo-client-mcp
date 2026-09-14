@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — never ask the user for credentials.
 
@@ -59,10 +59,11 @@ There are no tokens to handle — never ask the user for credentials.
 - **Correlation, not causality.** Before/after changes and `cart_rate_percent`
   are correlations — engaged visitors scroll further AND buy more, and
   seasonality or campaigns move numbers too. Phrase findings as
-  "po nasazení popisku vzrostlo X o Y %", never "popisek způsobil".
+  "after the description went live, X increased by Y%", never "the
+  description caused it".
 - **Orders are attributed, not complete.** Order counts cover only sessions
   where the customer viewed the product page first, and only on Shoptet.
-  Call them "objednávky po zhlédnutí produktu".
+  Call them "orders after viewing the product page".
 - **Null ≠ zero.** `null` values and empty blocks mean not enough data was
   collected yet (tracking starts when the Pobo plugin ships to the eshop) —
   never present missing data as bad performance.

@@ -1,6 +1,6 @@
 ---
 name: write-blog
-description: Write and edit Pobo Page Builder blog articles — compose an article yourself from widget templates, rewrite existing sections, insert photos and real product carousels, or hand the whole thing to Pobo's server-side generator. Use when the user wants a blog post, magazine article, buying guide or landing text on their e-shop: "napiš článek o…", "uprav ten blog", "přidej do článku fotky", "vlož do článku produkty". Uses the `pobo` MCP server tools.
+description: Write and edit Pobo Page Builder blog articles — compose an article yourself from widget templates, rewrite existing sections, insert photos and real product carousels, or hand the whole thing to Pobo's server-side generator. Use when the user wants a blog post, magazine article, buying guide or landing text on their e-shop: "write an article about…", "edit that blog post", "add photos to the article", "insert products into the article". Uses the `pobo` MCP server tools.
 ---
 
 # Write Pobo Page Builder blog articles
@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -121,7 +121,7 @@ an unfilled role renders as a gap on the live page.
   deterministic — and `cost_confirmed: true`. The quote is `1 + image_count × 2`.
 - It returns a `job_id`. Poll `get_blog_generate_status`; the `step` values are
   `preparing` → `writing` → `selecting_photos` → `composing` → `done`. Report
-  progress in those terms rather than repeating "ještě to běží".
+  progress in those terms rather than repeating "still running".
 - When it finishes, review it like your own work: `get_blog_content` and
   `review_blog`, and offer to fix weak sections with `edit_blog_widget` — which
   is free.

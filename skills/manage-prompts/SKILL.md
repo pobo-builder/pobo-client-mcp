@@ -1,6 +1,6 @@
 ---
 name: manage-prompts
-description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (zadání) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "nastav prompt pro generování", "uprav zadání popisků", "vyzkoušej ten prompt", "rozepiš požadavky klienta do promptu", "co je v našem promptu". Uses the `pobo` MCP server tools.
+description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (the brief) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "set up the generation prompt", "edit the description brief", "try out that prompt", "break down the client's requirements into the prompt", "what's in our prompt". Uses the `pobo` MCP server tools.
 ---
 
 # Manage Pobo Page Builder AI generation prompts
@@ -20,10 +20,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -78,8 +78,8 @@ requirements into per-widget instructions instead of positional prose.
 
 ### 4. Set per-widget instructions
 
-Prefer per-widget instructions over positional wording ("v první sekci
-napiš…") — positions shift when the design changes, per-widget instructions
+Prefer per-widget instructions over positional wording ("in the first section
+write…") — positions shift when the design changes, per-widget instructions
 target one widget deterministically and override the general prompt for it.
 
 Call `set_widget_prompt` with the **complete** new set (up to 30 items, each
@@ -126,7 +126,7 @@ not saved anywhere yet.
 Summarize for the user:
 
 - what was created/changed (profile name, linked design, per-widget coverage:
-  "5 z 8 widgetů má explicitní instrukci"),
+  "5 of 8 widgets have an explicit instruction"),
 - if the prompt text was overwritten, note that previous versions remain
   available in the history,
 - what the preview looked like, if you ran one (previews cost nothing, so

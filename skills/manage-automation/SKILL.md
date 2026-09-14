@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.

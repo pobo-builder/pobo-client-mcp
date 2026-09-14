@@ -1,6 +1,6 @@
 ---
 name: white-label-content
-description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "přidej ke všem těmhle produktům…", "uprav ve všech widgetech…", "najdi produkty, kde se píše o…", "zkopíruj obsah z produktu X na Y" or "vrať to zpátky". Uses the `pobo-whitelabel` MCP server tools.
+description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "add this to all these products…", "rewrite it in every widget…", "find products that mention…", "copy content from product X to Y" or "undo that". Uses the `pobo-whitelabel` MCP server tools.
 ---
 
 # Work with white label entity content
@@ -30,10 +30,10 @@ conflict; already having `pobo` connected does not grant access to
 If the `pobo-whitelabel` tools are unavailable, or MCP calls fail with
 **401 / unauthorized**, tell the user:
 
-> Připojte server pro white label obsah příkazem
+> Connect the white label content server with
 > `claude mcp add -s user --transport http pobo-whitelabel https://api.pobo.space/mcp/whitelabel`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -130,7 +130,7 @@ you last stored a copy — a stored copy is a snapshot, not the live truth.
 
 - `widget_instance_id` — exactly one widget on one entity,
 - `widget_id` — **every instance of that template** across the whole batch. This
-  is the one for "do každého widgetu napiš…".
+  is the one for "write this into every widget…".
 
 Only the roles you send change; images, other roles and the structure survive.
 
@@ -158,7 +158,7 @@ Every write stores a version of the entity first, and a whole run shares one
 
 `list_entity_batch` lists the recent runs on the whole e-shop — when, by which tool,
 how many entities and a few of their ids. That is where you start when the user says
-"vrať, cos včera udělal" and nobody kept the id.
+"undo what you did yesterday" and nobody kept the id.
 
 A revert saves the current state as a version too, so a revert can be reverted.
 Versions cover writes from anywhere — this server, the host's own integration
