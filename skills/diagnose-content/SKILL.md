@@ -1,6 +1,6 @@
 ---
 name: diagnose-content
-description: Find out why a generated Pobo Page Builder product description is missing something, came out wrong, or is not visible on the e-shop. Use when the user complains about generated content — "proč v popisku chybí dávkování", "vygenerovalo se to špatně", "proč to není na eshopu", "nepropsalo se to" — or asks what the AI actually found out about a product. Reads the generation runs, the web research behind them and the export that follows. Uses the `pobo` MCP server tools.
+description: Find out why a generated Pobo Page Builder product description is missing something, came out wrong, or is not visible on the e-shop. Use when the user complains about generated content — "why is the dosage missing from the description", "it generated badly", "why isn't it on the e-shop", "the change never went through" — or asks what the AI actually found out about a product. Reads the generation runs, the web research behind them and the export that follows. Uses the `pobo` MCP server tools.
 ---
 
 # Diagnose a Pobo Page Builder product description
@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -56,7 +56,7 @@ instructions target.
 - Nothing mentions the missing thing → **this is the answer.** The fix is the
   prompt. Add a per-widget instruction with `set_widget_prompt` (see the
   `manage-prompts` skill), test it with `preview_generation`, then save.
-- The instruction is there but positional ("v první sekci napiš…") → likely it
+- The instruction is there but positional ("in the first section write…") → likely it
   landed in a different widget than intended. Per-widget instructions target one
   widget deterministically; recommend converting it.
 - The instruction is there and pinned to the right widget → go to step 2.
@@ -100,18 +100,24 @@ about the product in general.
 - A run with `failed_at` set is **dead** — it is never retried, so its products
   stayed unexported. The content is fine; the export needs re-running from the
   Pobo admin.
-- `accepts_new_export: false` means an export is still in flight; wait for it.
+- `accepts_new_export: false` means the eshop has at least one export row that
+  never completed — it does **not** by itself mean one is still running. Check
+  the most recent row in `export`: if it has `failed_at` set, it is the dead
+  run above and the fix is re-running the export, not waiting. Only when the
+  latest row has no `failed_at` and `is_running: true` is it genuinely still
+  in flight and worth waiting for.
 - No recent export at all, and the product is `ready` → nobody started one.
 
 ## Reading the states honestly
 
-These four are misread constantly. Never guess at them and never soften them
+These are misread constantly. Never guess at them and never soften them
 into "something went wrong".
 
 | Signal | What it actually means |
 |---|---|
 | `is_complete: false`, `skip_reason: null` | The run is **stuck or still queued** — NOT failed. |
-| `skip_reason` set | The run was deliberately skipped; the reason says why. |
+| `is_complete: false`, `skip_reason` set | The run **died** — a crash, a deleted design/product mid-run, or the queue gave up after retries. It will never complete on its own; read `skip_reason` for what happened and start a fresh generation from the Pobo admin. |
+| `is_complete: true`, `skip_reason` set | The run finished cleanly but was **deliberately skipped** by a business rule (e.g. `only_ai` image mode with no platform photo) — the reason says why, and nothing needs retrying by itself. |
 | `research_status.reason: "no_ean"` | Research **never ran** — the product has no EAN to search by. It did not run and find nothing. |
 | `research_status.reason: "no_data"` | Research ran and came back empty. |
 
@@ -133,8 +139,9 @@ run, it does not measure performance. That is the `product-analytics` skill.
 ## Reporting to the user
 
 Say which of the three questions failed, in one sentence, before any detail.
-"Research to nenašel" and "nebylo to v zadání" lead to completely different
-fixes, and the user needs the difference more than they need the payloads.
+"The research never found it" and "it was never in the brief" lead to
+completely different fixes, and the user needs the difference more than they
+need the payloads.
 
 Quote concrete evidence — the cited source URL, the provider names, the widget
 the instruction was pinned to. When the answer is a Pobo limitation, say that

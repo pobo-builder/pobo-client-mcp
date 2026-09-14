@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -116,17 +116,21 @@ Rules:
 - **Always produce the complete SCSS file.** A push replaces the entire previous
   content — never generate an incremental diff. When iterating, re-emit everything.
 - **Never generate:** `@import`, `expression(`, `javascript:`, `vbscript:`,
-  `behavior:`, `-moz-binding`, or any external `url(...)` (anything with a scheme or
-  `//host/`). Only relative/local URLs are allowed. The server rejects these (the
-  blacklist also catches CSS-escape obfuscation), so don't produce them in the first
-  place. For fonts, set font-family variables to font names — never `@import` a font.
+  `behavior:`, `-moz-binding`. For `url(...)`, only these are accepted: a
+  relative/local path, an absolute `https://` URL on the Pobo CDN or the
+  platform's own asset CDN (`cdn.myshoptet.com`, `cdn.shopify.com`), or a
+  `data:image/...` URI (png/jpeg/gif/webp/avif/svg+xml). Any other origin, any
+  protocol-relative `//host/...` URL, or a non-image `data:` URI is rejected.
+  The server rejects all of this (the blacklist also catches CSS-escape
+  obfuscation), so don't produce it in the first place. For fonts, set
+  font-family variables to font names — never `@import` a font.
 - CSS only — no JavaScript assets, no widget/content management (out of scope).
 - Max 256 KB of SCSS.
 
 ### 6. Push
 
 Call `push_asset_css` with `eshop_id`, a descriptive `name` shown to the merchant in
-the Pobo Page Builder admin (e.g. "AI sjednocení designu"), and the complete `scss`.
+the Pobo Page Builder admin (e.g. "AI design unification"), and the complete `scss`.
 
 - Each e-shop has at most one AI asset; the push is an idempotent upsert
   (`action: created | updated`).

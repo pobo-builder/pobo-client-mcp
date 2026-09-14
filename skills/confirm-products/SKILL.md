@@ -18,10 +18,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -108,30 +108,35 @@ Summarize for the user:
 
 `list_product` gives you the same filters the user sees in the Pobo admin
 product grid — what you list is exactly what they see there. Combinable
-parameters:
+parameters. The last column is the literal label as it appears in the
+**Czech** Pobo admin UI — keep it in Czech so you can match what the user
+sees on screen there; the English meaning follows in parentheses:
 
-| Parameter | Values | Admin grid equivalent |
-|-----------|--------|-----------------------|
-| `filter` | `all` (default) | Vše |
+| Parameter | Values | Label in the Czech admin UI |
+|-----------|--------|------------------------------|
+| `filter` | `all` (default) | Vše (all) |
 | | `without_description` | Bez popisku (no Pobo content yet) |
-| | `edited` | Upravené v Pobo |
-| | `favourite` | Oblíbené |
-| | `waiting_for_approval` | Čeká na schválení (status `draft`) |
-| | `recently_edited` | ordering: Naposledy upraveno |
-| | `most_visited` | ordering: Nejnavštěvovanější |
-| | `most_added_to_cart` | ordering: Nejčastěji v košíku |
+| | `edited` | Upravené v Pobo (edited in Pobo) |
+| | `favourite` | Oblíbené (favourites) |
+| | `waiting_for_approval` | Čeká na schválení (waiting for approval; status `draft`) |
+| | `recently_edited` | ordering: Naposledy upraveno (most recently edited) |
+| | `most_visited` | ordering: Nejnavštěvovanější (most visited) |
+| | `most_added_to_cart` | ordering: Nejčastěji v košíku (most added to cart) |
 | `query` | string | full-text search (name, code, EAN) |
 | `label_id` | array of label ids | label filter |
-| `category_id` | array of category ids | Kategorie |
-| `brand_id` | array of brand ids | Značka |
-| `is_visible` | `all` / `visible` / `hidden` | Viditelnost |
+| `category_id` | array of category ids | Kategorie (category) |
+| `brand_id` | array of brand ids | Značka (brand) |
+| `is_visible` | `all` / `visible` / `hidden` | Viditelnost (visibility) |
 | `limit`, `page` | max 100 per page, 1-based | pagination |
 
-When the user names a category ("drafts in Masážní pomůcky"), resolve the name
+When the user names a category ("drafts in Massage Tools"), resolve the name
 to an id first with `list_category` (`query` full-text search; returns id,
-name, url, status, has_content, product_count and takes the same `filter`
-values), then pass the id to `list_product` via `category_id`. If the name
-matches several categories, present them and let the user choose.
+name, url, status, has_content, product_count), then pass the id to
+`list_product` via `category_id`. `list_category` takes a narrower `filter`
+set than `list_product` — `all`, `without_description`, `edited`, `favourite`,
+`waiting_for_approval`, `recently_edited` only (no `most_visited` /
+`most_added_to_cart`, which don't apply to categories). If the name matches
+several categories, present them and let the user choose.
 
 Response: `{"product": [{id, name, code, url, status, is_visible,
 is_favourite, has_content}], "total", "page", "limit"}`. Always page through

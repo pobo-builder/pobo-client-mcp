@@ -1,12 +1,12 @@
 {
     "name": "pobo",
-    "description": "Pobo Page Builder tools for Claude — AI styling of widgets to match your e-shop design, blog article authoring, product labeling from client-supplied lists (EANs, codes, URLs, names), product status confirmation (draft/ready), management and free dry-run testing of AI generation prompts, and diagnostics for generated descriptions, through the Pobo MCP server.",
-    "version": "0.7.0",
+    "description": "Pobo Page Builder tools for Claude — AI styling of widgets to match your e-shop design, blog article authoring, product labeling from client-supplied lists (EANs, codes, URLs, names), product status confirmation (draft/ready), management and free dry-run testing of AI generation prompts, scheduled nightly description automation, diagnostics for generated descriptions, and bulk editing of white label entity content with full undo, through the Pobo MCP servers (merchant tools plus a separate white label server).",
+    "version": "0.10.0",
     "author": {
         "name": "Tomáš Smetka <tomas@pobo.cz>",
         "url": "https://www.pobo.space"
     },
-    "homepage": "https://github.com/pobo-builder/claude-plugin",
-    "repository": "https://github.com/pobo-builder/claude-plugin",
-    "keywords": ["pobo", "styling", "css", "scss", "widgets", "eshop", "shoptet", "labels", "products", "prompts", "ai-generation", "status", "export", "blog", "content", "diagnostics", "preview"]
+    "homepage": "https://github.com/pobo-builder/pobo-client-mcp",
+    "repository": "https://github.com/pobo-builder/pobo-client-mcp",
+    "keywords": ["pobo", "styling", "css", "scss", "widgets", "eshop", "shoptet", "labels", "products", "prompts", "ai-generation", "automation", "scheduling", "status", "export", "blog", "content", "diagnostics", "preview", "white-label", "bulk-edit", "undo"]
 }

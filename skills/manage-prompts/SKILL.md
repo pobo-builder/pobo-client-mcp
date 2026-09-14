@@ -1,6 +1,6 @@
 ---
 name: manage-prompts
-description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (zadání) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "nastav prompt pro generování", "uprav zadání popisků", "vyzkoušej ten prompt", "rozepiš požadavky klienta do promptu", "co je v našem promptu". Uses the `pobo` MCP server tools.
+description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (the brief) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "set up the generation prompt", "edit the description brief", "try out that prompt", "break down the client's requirements into the prompt", "what's in our prompt". Uses the `pobo` MCP server tools.
 ---
 
 # Manage Pobo Page Builder AI generation prompts
@@ -20,10 +20,10 @@ The `pobo` MCP server is connected once via OAuth — the user runs
 and logs in with their Pobo Page Builder account in the browser. If the `pobo`
 tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Připojte Pobo server příkazem
+> Connect the Pobo server with
 > `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
-> `/mcp` a přihlaste se znovu.
+> and sign in with your Pobo account in the browser. If the connection expired,
+> run `/mcp` and sign in again.
 
 There are no tokens to handle — authentication is a browser login, never ask the
 user for credentials in the conversation.
@@ -78,8 +78,8 @@ requirements into per-widget instructions instead of positional prose.
 
 ### 4. Set per-widget instructions
 
-Prefer per-widget instructions over positional wording ("v první sekci
-napiš…") — positions shift when the design changes, per-widget instructions
+Prefer per-widget instructions over positional wording ("in the first section
+write…") — positions shift when the design changes, per-widget instructions
 target one widget deterministically and override the general prompt for it.
 
 Call `set_widget_prompt` with the **complete** new set (up to 30 items, each
@@ -100,13 +100,21 @@ the matching widget of the design and write one focused instruction per widget.
 
 `preview_generation` dry-runs the prompt against 1–3 real products **without
 writing anything and without spending credits** — no widgets, no images, no
-generation history row. This is how you find out whether an edit actually
-produced better copy; guessing from the prompt text alone does not.
+generation history row. This is how you find out whether an edit to the
+general prompt actually produced better copy; guessing from the prompt text
+alone does not.
+
+**It does not test per-widget instructions.** `preview_generation` only
+exercises the general `prompt` text and the generation settings below — it
+never applies the instructions set via `set_widget_prompt`, even if the
+profile already has some saved. There is no tool that previews per-widget
+instructions; judge their wording by re-reading it, not by previewing it.
 
 - Pass `eshop_id`, `design_id`, `product_id` (1–3, from `find_product` or
   `list_product`) and the `prompt` text you are testing. Optional generation
   settings mirror the admin: `paragraph_length`, `generate_seo_meta`,
-  `generate_entity_name`, `use_ai_profile`, `use_serp_context`,
+  `generate_entity_name`, `generate_short_description`
+  (`never`/`when_missing`/`always`), `use_ai_profile`, `use_serp_context`,
   `use_web_research`, `search_web`, `search_model`.
 - It returns one token per product. Poll them with `get_preview_status` —
   status `pending` until the queue picks the job up, then `complete` with the
@@ -126,7 +134,7 @@ not saved anywhere yet.
 Summarize for the user:
 
 - what was created/changed (profile name, linked design, per-widget coverage:
-  "5 z 8 widgetů má explicitní instrukci"),
+  "5 of 8 widgets have an explicit instruction"),
 - if the prompt text was overwritten, note that previous versions remain
   available in the history,
 - what the preview looked like, if you ran one (previews cost nothing, so
@@ -143,7 +151,9 @@ Summarize for the user:
   (keep a copy of the state you read in step 1). They have no server-side
   history.
 - Whole profile: `delete_prompt` removes it from the e-shop (confirm with the
-  user first — this also deletes its per-widget instructions).
+  user first). If no other e-shop uses the same profile it is deleted
+  outright, together with its per-widget instructions; the response's `action`
+  field says `deleted` vs `detached`.
 
 ## Error handling
 
