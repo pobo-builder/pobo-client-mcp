@@ -88,7 +88,8 @@ equal `item_count` from the catalog exactly. This applies to `add_entity_widget`
 `edit_entity_widget`, and the per-widget `content` in `compose_entity_content`
 and `fill_design_content`. Do not use `items` (plural) — that is the
 `write-blog` skill's shape for its own tools, not this one's; sending it here
-is silently ignored, because it is not a role name.
+fails validation with `This widget has no role "items". Read
+get_entity_widget_catalog for the roles it takes.` and the whole write aborts.
 
 The text you send is written into **every language** the e-shop has. Per-language
 wording is not possible here; if the merchant needs it, that is admin work.
