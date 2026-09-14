@@ -174,6 +174,7 @@ the admin grid, so you can verify the result visually.
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
 - `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
 - `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
+- `skills/manage-automation/` — the workflow for scheduled nightly description automation: create, preview, pause/resume, run history
 - `skills/diagnose-content/` — the workflow for finding out why a generated description is missing something
 - `skills/product-analytics/` — the workflow for reading how a description performs after it went live
 - `skills/white-label-content/` — the workflow for white label e-shops: finding entities and editing their widget content in bulk (uses the separate `pobo-whitelabel` server, see above)
