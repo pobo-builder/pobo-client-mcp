@@ -85,6 +85,45 @@ catalog before you assume otherwise.
 The text you send is written into **every language** the e-shop has. Per-language
 wording is not possible here; if the merchant needs it, that is admin work.
 
+## Filling or composing a whole entity
+
+Two ways to put a complete description on one entity, instead of adding
+widgets one at a time with `add_entity_widget`:
+
+- **A design template decides the shape.** `list_design` finds templates the
+  eshop can use (match `category` to the entity); `get_design_structure` with
+  `eshop_id` and `design_id` returns the template's contract — for every
+  widget its `design_widget_id`, roles with `format` and `max_length`, how
+  many items a repeatable widget holds, and how many image/icon slots it has.
+  A widget that cannot be filled stays in the list with a reason. Read this
+  every time you fill a template — the limits are a property of THAT
+  template, never carry ids or limits over from another design or another
+  run. `fill_design_content` then takes your texts, images and icons per
+  `design_widget_id` and returns the rendered HTML; it registers the entity
+  if it does not exist yet. A second call REPLACES the whole entity, so send
+  the complete content and say so before overwriting something that already
+  has one.
+- **You decide the shape.** `compose_entity_content` builds the whole
+  description in one call with no template involved: pick the widgets
+  yourself from `get_entity_widget_catalog`, and send them as an ordered
+  `widget` array (30 at most), each `{widget_id, content, image}` —
+  `content` holds the texts by role, `image` holds your own https URLs (a
+  plain URL or `{url, alt}`, 20 at most per widget). `mode: "replace"` (the
+  default) makes the entity hold exactly what you send; `mode: "append"`
+  keeps what is already there and adds after it. The entity is created when
+  `entity_id` is unknown, and an optional `title` names it for `list_entity`
+  search. Nothing is written until the WHOLE composition validates — with
+  `mode: "replace"` a partial write would otherwise leave the entity with an
+  empty description and a handful of blocks, so one bad widget fails the
+  whole call instead of writing the rest. The response's `batch_id` undoes
+  the whole call with `revert_entity`, same as any other bulk write here.
+
+Either way, `get_entity_html` reads the current rendered HTML afterward —
+`eshop_id`, `entity_id`, `entity_type`, optional `lang` (omit for the default
+language). Use it after `fill_design_content` or `compose_entity_content`, or
+whenever the merchant may have edited the content in the Pobo editor since
+you last stored a copy — a stored copy is a snapshot, not the live truth.
+
 ## Changing and removing
 
 `edit_entity_widget` rewrites texts by role. Two ways to aim it:
@@ -148,8 +187,10 @@ undoing fifty entities by hand — and if it is lost, `list_entity_batch` finds 
 - `Eshop not found.` — not a white label e-shop, or not one this account owns;
   see the scope note in Prerequisites.
 - `Entity not found on this eshop.` (per entity) — the host's id does not exist
-  in Pobo yet. Entities are registered by the host's integration or by
-  `fill_design_content`, not by the widget tools.
+  in Pobo yet. Entities are registered by the host's integration, by
+  `fill_design_content`, or by `compose_entity_content` — not by the widget
+  tools (`add_entity_widget` and friends require an entity that already
+  exists).
 - Widget template not in the catalog — re-run `get_entity_widget_catalog`.
 - `At most N characters…` — the limit comes from the template, not from Pobo's
   taste; shorten the text, do not switch template to dodge it.
@@ -162,8 +203,6 @@ undoing fifty entities by hand — and if it is lost, `list_entity_batch` finds 
 
 - AI-written content — nothing here calls a model; the words are yours and no
   credits are spent.
-- Filling a whole template at once — that is `fill_design_content`, which
-  replaces the entity's content from a design template.
 - Per-language wording, video widgets, and publishing to the host's own site.
 - Machine-to-machine automation: this server authenticates a person. A nightly
   job over thousands of products stays on the white label REST API.
