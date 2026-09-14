@@ -23,7 +23,7 @@ Supported platforms: Shoptet, Shopify, WooCommerce, PrestaShop, Upgates.
 In [Claude Code](https://claude.com/claude-code), run:
 
 ```
-/plugin marketplace add pobo-builder/claude-plugin
+/plugin marketplace add pobo-builder/pobo-client-mcp
 /plugin install pobo@pobo-builder
 ```
 

@@ -6,7 +6,7 @@
         "name": "Tomáš Smetka <tomas@pobo.cz>",
         "url": "https://www.pobo.space"
     },
-    "homepage": "https://github.com/pobo-builder/claude-plugin",
-    "repository": "https://github.com/pobo-builder/claude-plugin",
+    "homepage": "https://github.com/pobo-builder/pobo-client-mcp",
+    "repository": "https://github.com/pobo-builder/pobo-client-mcp",
     "keywords": ["pobo", "styling", "css", "scss", "widgets", "eshop", "shoptet", "labels", "products", "prompts", "ai-generation", "status", "export", "blog", "content", "diagnostics", "preview", "white-label", "bulk-edit", "undo"]
 }
