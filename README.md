@@ -180,6 +180,8 @@ the admin grid, so you can verify the result visually.
 - `skills/product-analytics/` — the workflow for reading how a description performs after it went live
 - `skills/white-label-content/` — the workflow for white label e-shops: finding entities and editing their widget content in bulk (uses the separate `pobo-whitelabel` server, see above)
 
+See [`TOOLS.md`](TOOLS.md) for the complete reference of every tool both servers expose.
+
 The connection to the Pobo Page Builder MCP servers is set up by the `claude mcp add`
 commands above (OAuth login in the browser), not bundled in the plugin.
 
