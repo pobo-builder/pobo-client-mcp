@@ -29,6 +29,15 @@ In [Claude Code](https://claude.com/claude-code), run:
 
 ## Connecting your Pobo Page Builder account
 
+Pobo exposes two separate MCP servers. Most people only need the first one —
+the second is for white label (B2B) hosts managing content on their own
+entities. Connect either or both; they are independent OAuth connections and
+coexist without conflict.
+
+### `pobo` — merchant tools
+
+Everything except white label bulk content editing: styling, blog authoring,
+product labeling and status, prompt management, diagnostics and analytics.
 Run this once in your terminal:
 
 ```
@@ -40,10 +49,26 @@ approve access. That's it: no tokens, no environment variables, no config files.
 The connection persists across all your projects; if it ever expires, run `/mcp`
 in Claude Code and re-authenticate.
 
+### `pobo-whitelabel` — white label bulk content editing
+
+Only for white label (B2B) e-shops, where products, categories and articles
+are identified by your own ids. Connect it under a **different** server name —
+reusing `pobo` would overwrite the connection above instead of adding a second
+one:
+
+```
+claude mcp add -s user --transport http pobo-whitelabel https://api.pobo.space/mcp/whitelabel
+```
+
+Same login flow as above. If your e-shop is not a white label host, its tools
+will report `Eshop not found.` for every call — that's the scope gate, not a
+bug, and you likely don't need this server at all.
+
 ### Claude.ai / ChatGPT (web)
 
-The same server works without Claude Code. Add a custom connector with the URL
-`https://api.pobo.space/mcp/client`:
+Both servers work without Claude Code. Add a custom connector with the
+relevant URL — `https://api.pobo.space/mcp/client` for merchant tools,
+`https://api.pobo.space/mcp/whitelabel` for white label bulk content editing:
 
 - **Claude.ai**: Settings → Connectors → Add custom connector
 - **ChatGPT**: Settings → Connectors → Create
@@ -151,10 +176,10 @@ the admin grid, so you can verify the result visually.
 - `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
 - `skills/diagnose-content/` — the workflow for finding out why a generated description is missing something
 - `skills/product-analytics/` — the workflow for reading how a description performs after it went live
-- `skills/white-label-content/` — the workflow for white label e-shops: finding entities and editing their widget content in bulk
+- `skills/white-label-content/` — the workflow for white label e-shops: finding entities and editing their widget content in bulk (uses the separate `pobo-whitelabel` server, see above)
 
-The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
-command above (OAuth login in the browser), not bundled in the plugin.
+The connection to the Pobo Page Builder MCP servers is set up by the `claude mcp add`
+commands above (OAuth login in the browser), not bundled in the plugin.
 
 ## About
 

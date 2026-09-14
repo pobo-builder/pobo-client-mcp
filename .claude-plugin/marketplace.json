@@ -11,7 +11,7 @@
         {
             "name": "pobo",
             "source": "./",
-            "description": "Pobo Page Builder tools for Claude — AI styling of widgets, blog article authoring, product labeling from client-supplied lists, product status confirmation (draft/ready), AI generation prompt management with free previews, diagnostics for generated descriptions, and bulk editing of white label entity content with full undo, through the Pobo MCP server."
+            "description": "Pobo Page Builder tools for Claude — AI styling of widgets, blog article authoring, product labeling from client-supplied lists, product status confirmation (draft/ready), AI generation prompt management with free previews, diagnostics for generated descriptions, and bulk editing of white label entity content with full undo, through the Pobo MCP servers (merchant tools plus a separate white label server)."
         }
     ]
 }

@@ -1,6 +1,6 @@
 ---
 name: white-label-content
-description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "přidej ke všem těmhle produktům…", "uprav ve všech widgetech…", "najdi produkty, kde se píše o…", "zkopíruj obsah z produktu X na Y" or "vrať to zpátky". Uses the `pobo` MCP server tools.
+description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "přidej ke všem těmhle produktům…", "uprav ve všech widgetech…", "najdi produkty, kde se píše o…", "zkopíruj obsah z produktu X na Y" or "vrať to zpátky". Uses the `pobo-whitelabel` MCP server tools.
 ---
 
 # Work with white label entity content
@@ -13,13 +13,25 @@ content in the language the e-shop sells in, not in English.
 
 ## Prerequisites & auth
 
-The `pobo` MCP server is connected once via OAuth — the user runs
-`claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
-and logs in with their Pobo Page Builder account in the browser. If the `pobo`
-tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
+White label content lives on its **own** MCP server, separate from the general
+`pobo` server the other skills use — **`pobo-whitelabel`**. It is connected
+once via OAuth, with its own server name so the two connections do not clash:
+the user runs
 
-> Připojte Pobo server příkazem
-> `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
+`claude mcp add -s user --transport http pobo-whitelabel https://api.pobo.space/mcp/whitelabel`
+
+and logs in with their Pobo Page Builder account in the browser. Use exactly
+this name — **`pobo-whitelabel`, not `pobo`**. Adding it as `pobo` overwrites
+the merchant connection those other skills depend on instead of adding a
+second one. The two servers are connected independently and coexist without
+conflict; already having `pobo` connected does not grant access to
+`pobo-whitelabel` tools, and the reverse is also true.
+
+If the `pobo-whitelabel` tools are unavailable, or MCP calls fail with
+**401 / unauthorized**, tell the user:
+
+> Připojte server pro white label obsah příkazem
+> `claude mcp add -s user --transport http pobo-whitelabel https://api.pobo.space/mcp/whitelabel`
 > a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
 > `/mcp` a přihlaste se znovu.
 
@@ -29,7 +41,7 @@ user for credentials in the conversation.
 **This skill only applies to white label e-shops.** On any other platform the
 tools answer `Eshop not found.` — that is the scope gate, not a bug. If that is
 what you get, the merchant is not a white label host and the work belongs to the
-regular product/blog skills instead.
+regular product/blog skills instead (the `pobo` server).
 
 ## Find before you change
 
