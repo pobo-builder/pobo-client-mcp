@@ -1137,7 +1137,7 @@ Removes widgets from up to 50 entities, matched by one widget instance, by every
 
 **Returns (confirmed run):** `batch_id`, `widget_removed` (total), a `summary`, and per-entity `entity` array with `status: removed` and `widget_removed` count.
 
-**Careful:** the first call with `confirmed` omitted or false performs no deletion regardless of how broad the filter is — this is a deliberate two-phase gate specifically because a typo in `query` could otherwise strip content from hundreds of entities in one call. The actual deletion (second call) is a hard delete of the matched widget rows, but it is reversible via `revert_entity` using the returned `batch_id`, since a version snapshot is captured per entity before deleting.
+**Careful:** the first call with `confirmed` omitted or false performs no deletion regardless of how broad the filter is — this is a deliberate two-phase gate specifically because a typo in `query` could otherwise strip content from hundreds of entities in one call. The actual deletion (second call) is a soft delete of the matched widget rows (the row is marked deleted, not physically removed), but it is reversible via `revert_entity` using the returned `batch_id`, since a version snapshot is captured per entity before deleting.
 
 ### `revert_entity`
 
