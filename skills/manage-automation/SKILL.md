@@ -94,7 +94,7 @@ e-shop, optionally filtered by `rule_id`) — read `status` per run:
 | `status` | Meaning |
 |---|---|
 | `success` | every candidate was queued |
-| `partial` | some candidates were skipped (credit or the 30-day anti-dupe window), but at least one job was created |
+| `partial` | fewer jobs were created than there were candidates — always a credit shortfall (the 30-day anti-dupe window is applied before candidates are even counted, so it cannot cause this). **This does NOT guarantee anything was generated** — if credit ran out before the first candidate, `job_created` is 0 and the run still reports `partial`. Always read `job_created` itself rather than inferring from the status label. |
 | `failed` | an error stopped the run before any job was created |
 | `skipped` | the selector found no candidates, or the e-shop has too many jobs already pending |
 | `running` | still in progress (this is normally seconds, not minutes) |
@@ -130,8 +130,10 @@ candidates did not become jobs.
 - `Prompt "{name}" is a {type} profile and cannot generate product
   descriptions...` — pick a prompt that can generate text (not `image` or
   `scss`); see step 2.
-- Validation error on `schedule_cron` — only daily or weekly patterns are
-  accepted, at most once a day; no sub-hourly expressions.
+- Validation error on `schedule_cron` — the only rule is that consecutive
+  runs must be at least 24 hours apart; anything that fires more than once a
+  day (sub-hourly, hourly, twice-daily, …) is rejected, but weekly, monthly
+  or any multi-day schedule is fine.
 - Validation error on `batch_size` — 1 to 500.
 - A run with `status: "skipped"` and a nonzero `candidate_count` — the e-shop
   hit its pending-job backpressure limit; check `error_message` on the run for
