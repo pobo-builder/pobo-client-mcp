@@ -36,8 +36,9 @@ coexist without conflict.
 
 ### `pobo` — merchant tools
 
-Everything except white label bulk content editing: styling, blog authoring,
-product labeling and status, prompt management, diagnostics and analytics.
+Everything except white label bulk content editing: writing the description of a
+product, a category or a blog article, styling, product labeling and status,
+prompt management, diagnostics and analytics.
 Run this once in your terminal:
 
 ```
@@ -139,6 +140,10 @@ and runs a quality check for empty slots at the end. Pobo's own server-side
 generator is available too when you want it; Claude always says up front which
 one it is using and what it costs.
 
+The same tools write **product and category descriptions**, not just articles —
+each one takes `entity_type`. And every write is versioned, so "undo what you did
+to those twenty products" is one call, not twenty.
+
 Or, on a white label e-shop, change content across a batch of your own entities:
 
 > Add a widget with Christmas Eve delivery information to all five products
@@ -171,7 +176,7 @@ the admin grid, so you can verify the result visually.
 ## What's in the plugin
 
 - `skills/style-widgets/` — the workflow for AI styling of widgets
-- `skills/write-blog/` — the workflow for authoring and editing blog articles
+- `skills/write-blog/` — the workflow for authoring and editing descriptions: blog articles, products and categories
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
 - `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
 - `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
