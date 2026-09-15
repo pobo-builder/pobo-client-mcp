@@ -144,6 +144,10 @@ The same tools write **product and category descriptions**, not just articles â€
 each one takes `entity_type`. And every write is versioned, so "undo what you did
 to those twenty products" is one call, not twenty.
 
+Claude also looks in your own media library and your ready-made icon set before it
+reaches for a stock photo or anything paid â€” a picture you already chose beats a
+generated one, and it costs nothing.
+
 Or, on a white label e-shop, change content across a batch of your own entities:
 
 > Add a widget with Christmas Eve delivery information to all five products
