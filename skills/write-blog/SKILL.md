@@ -104,7 +104,19 @@ wrong widget.
 
 - `move_content_widget` reorders (1-based positions).
 - `remove_content_widget` deletes — destructive, and its first call only returns
-  a preview; it removes nothing until you repeat it with `confirmed: true`.
+  a preview; it removes nothing until you repeat it with `confirmed: true` **and
+  the `confirm_token` the preview handed back**. That token is a fingerprint of
+  the run: if the entity changed in between, it no longer matches and the call
+  is refused. That is not an error to work around — it means what you were shown
+  is no longer what would happen, so preview again. It also takes
+  `entity_id_list` for up to ten entities behind one preview.
+- `search_content` finds the entities whose description contains a phrase, which
+  `list_product` does not search. Use it before a rewrite: "which products still
+  mention the old price".
+- `get_platform_content` is what the shop itself says about the entity today.
+  **Read it before rewriting anything** — it usually holds facts that exist
+  nowhere else (dimensions, materials, what is in the box), and a rewrite that
+  ignores it quietly drops them. Carry its facts over; do not copy its wording.
 - `copy_content_widget` puts one entity's widgets onto others of the same type —
   up to 25 products or 50 categories / articles in one call.
 - `update_content_meta` writes the name and the SEO fields. **It will refuse
@@ -121,10 +133,20 @@ wrong widget.
   catalog, keeping the texts verbatim (pass the target `widget_id` — it never
   picks a layout for you).
 
-### 5. Photos and what they cost
+### 5. Photos, icons, and what they cost
 
-`image_source` of `stock`, `uploaded` or `image_bank` is **free**. Use these
-first.
+**Look before you buy.** In this order:
+
+1. `list_content_image` — what this entity already holds.
+2. `list_content_media` — the eshop's whole media library, the folders and files
+   the merchant uploaded themselves. A picture they already chose and paid for
+   beats a stock photo, and beats a generated one by a mile.
+3. `import_content_image` — pull one in from a public https URL if the user
+   gives you an address.
+4. `image_source: "stock"` — Pexels, free.
+5. `image_source: "ai"` — **paid**, and the last resort.
+
+`image_source` of `stock`, `uploaded` or `image_bank` is **free**.
 
 `image_source: "ai"` is **paid**. The tool will not spend anything on the first
 call — it returns `confirm_required: true` with `photo_count` and `cost`. Relay
@@ -132,7 +154,23 @@ that price to the user in their currency terms, wait for an explicit yes, and
 only then repeat the same call with `cost_confirmed: true`. There is no separate
 confirm tool, and `confirm_required` is not an error.
 
-Check `get_credit` before offering a paid option, so you do not quote a price
+**Icons are their own thing.** Widgets that show a row of benefits or parameters
+have icon slots (`icon_slot` in the catalog), filled with `icon_url`.
+
+- `list_icon` is the ready-made set — hundreds of icons in named categories,
+  free. **Always look here first.**
+- `generate_content_icon` draws new ones for subjects the set does not have.
+  It is **paid**, quotes first like AI photos, and runs in the background:
+  it hands back a token and `get_content_icon_status` says when the files are
+  there and what they cost.
+- **There is no cache.** Every subject is drawn and billed again, so asking for
+  a subject the ready-made set already covers is paying twice for the same
+  picture. A duplicate subject inside one call is refused for the same reason.
+- Derive the subjects from the text the icons will stand next to — write the
+  benefits first, then name their icons. Subjects invented before the copy
+  exists produce icons that do not match it.
+
+Check `get_credit` before offering any paid option, so you do not quote a price
 the balance cannot cover.
 
 ### 6. Review

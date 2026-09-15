@@ -15,7 +15,7 @@ an eshop on any other platform returns "Eshop not found."
 Every parameter, return value and constraint documented below comes from the
 server's own tool schema and description, not from guessing at intended behavior.
 
-80 tools in total — 63 on the merchant server, 19 on the white label one, with
+84 tools in total — 67 on the merchant server, 19 on the white label one, with
 `list_eshop` and `list_design` served by both.
 
 **Changed on 2026-09-15:** the eleven `*_blog_*` widget tools were retired and
@@ -52,13 +52,17 @@ articles through one `entity_type` parameter. See
   - [`copy_content_widget`](#copy_content_widget)
   - [`delete_content_image`](#delete_content_image)
   - [`edit_content_widget`](#edit_content_widget)
+  - [`generate_content_icon`](#generate_content_icon)
   - [`get_content_history`](#get_content_history)
+  - [`get_content_icon_status`](#get_content_icon_status)
   - [`get_content_widget`](#get_content_widget)
   - [`get_content_widget_catalog`](#get_content_widget_catalog)
   - [`get_platform_content`](#get_platform_content)
   - [`import_content_image`](#import_content_image)
   - [`list_content_batch`](#list_content_batch)
   - [`list_content_image`](#list_content_image)
+  - [`list_content_media`](#list_content_media)
+  - [`list_icon`](#list_icon)
   - [`move_content_widget`](#move_content_widget)
   - [`remove_content_widget`](#remove_content_widget)
   - [`render_content_html`](#render_content_html)
@@ -484,7 +488,7 @@ Build the whole description of one product, category or blog article in a single
 ### `convert_content_widget`
 
 **Server:** merchant (`/mcp/client`)  
-**Costs credits:** only with `image_source="ai"` (2 credits per picture, quoted first)  
+**Costs credits:** only with `image_source="ai"` (quoted first, nothing spent until `cost_confirmed=true`)  
 **Destructive:** yes
 
 Replace one widget of a product, category or blog article with a different template at the same position, carrying its texts over word for word. Read get_content_widget_catalog first and pass the target widget_id — this tool never picks a layout for you. Give image_query to fill the new layout's picture slots: stock (free), uploaded (the entity media library, free), image_bank (free), ai (PAID — the first call only quotes the price and changes nothing). Texts whose role the new template does not have are dropped, and the response lists them. Versioned and undoable with revert_content.
@@ -552,6 +556,21 @@ Rewrite the texts of widgets that already sit on one product, category or blog a
 | `widget_id` | integer | no | Rewrite every instance of this template on the entity. Give this or widget_instance_id, not both. |
 | `lang` | string | no | Language key to rewrite; omit for the default. The other languages are left untouched. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
 
+### `generate_content_icon`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** **yes** — one credit price per subject, quoted first, nothing drawn until `cost_confirmed=true`  
+**Destructive:** no
+
+Draw new icons for the subjects you name — for the rows of a benefits or parameters widget, where an icon sits next to each line. PAID: each subject costs credits and the first call only quotes the price, drawing nothing until you repeat it with cost_confirmed=true. Check list_icon first: there is no cache, so a subject the ready-made set already covers is paid for twice. Drawing is queued, so this returns a token and get_content_icon_status says when the files are there. A subject already drawn for this eshop comes back as existing and is not billed again.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `subject` | array of string | yes | What each icon should depict, one short noun phrase each, 10 at most. Derive them from the text the icons will stand next to, not from a guess about the product. |
+| `style` | string | no | How the whole icon set should look. It is stored on the eshop set, not on this run — one eshop, one style — so sending it changes the look of icons drawn from now on. |
+| `cost_confirmed` | boolean | no | Set true after the user confirmed the quoted cost. |
+
 ### `get_content_history`
 
 **Server:** merchant (`/mcp/client`)  
@@ -566,6 +585,19 @@ Versions of one product, category or blog article, newest first: version_id, whe
 | `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
 | `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
 | `limit` | integer | no | How many versions to return, 50 at most (default 20). |
+
+### `get_content_icon_status`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+How a run of generate_content_icon is going: which icons are drawn and at what URL, which were already in the set, which failed and why, and how many credits it has actually used. Put a drawn icon into a widget with icon_url (add_content_widget) or icon (compose_content). Only drawn icons are billed — a failed one costs nothing.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `token` | string | yes | The token generate_content_icon returned. |
 
 ### `get_content_widget`
 
@@ -655,6 +687,35 @@ Pictures already stored on one product, category or blog article: id, CDN url an
 | `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
 | `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
 
+### `list_content_media`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Folders and files of the eshop media library — what the merchant has already uploaded, as opposed to list_content_image, which is one entity's own pictures. Call it without folder_id to list the folders with how many files each holds, or with one to list that folder's files with their URLs. Videos live here too and carry their encoding status. Prefer a picture the merchant already owns over a stock photo or a paid generation.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `folder_id` | integer | no | List the files of this folder. Omit it to list the folders themselves. |
+| `limit` | integer | no | How many files to return, 200 at most (default 50). |
+
+### `list_icon`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+The ready-made icons this eshop can use, with the URL each one is placed by. Widgets that have icon slots (icon_slot in get_content_widget_catalog) take those URLs as icon_url in add_content_widget or as icon in compose_content. Call it without category_id to see the categories and a sample from each, or with one to list that category. Icons are free and no model is involved — these are curated files, not generated ones.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `category_id` | integer | no | List one category. Omit it to get every category with a sample of its icons. |
+| `query` | string | no | Only categories whose name contains this. |
+| `limit` | integer | no | How many icons per category, 200 at most (default 60). |
+
 ### `move_content_widget`
 
 **Server:** merchant (`/mcp/client`)  
@@ -677,13 +738,14 @@ Move one widget to another place inside its product, category or blog article. P
 **Costs credits:** no  
 **Destructive:** yes
 
-DELETES widgets from one product, category or blog article. Pick them by widget_instance_id (one widget), by widget_id (every instance of a template on that entity) or by query (every widget whose text contains it). The first call REMOVES NOTHING — it answers with what would go, and you repeat it with confirmed=true to do it. The run is recorded under one batch_id, and the remaining widgets close the gap.
+DELETES widgets from one or more products, categories or blog articles. Pick them by widget_instance_id (one widget), by widget_id (every instance of a template on that entity) or by query (every widget whose text contains it). Give entity_id for one, or entity_id_list for up to 10 at once — the selector is applied to each of them separately. The first call REMOVES NOTHING — it answers with what would go from which entity, and you repeat it with confirmed=true AND the confirm_token it returned. A locked entity is reported and skipped, the rest still runs. The run is recorded under one batch_id, and the remaining widgets close the gap.
 
 | Parameter | Type | Required | Notes |
 |---|---|---|---|
 | `eshop_id` | integer | yes | Eshop id (see list_eshop). |
 | `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
-| `entity_id` | integer | yes | Pobo id of the entity. |
+| `entity_id` | integer | no | Pobo id of the entity. Give this or entity_id_list. |
+| `entity_id_list` | array of integer | no | Several entities at once, 10 at most — the alternative to entity_id. |
 | `widget_instance_id` | integer | no | Remove this one widget (from get_content_widget). |
 | `widget_id` | integer | no | Remove every instance of this template on the entity. |
 | `query` | string | no | Remove every widget whose text contains this, ignoring case and diacritics. |
@@ -739,7 +801,7 @@ Find the products, categories or blog articles whose Pobo description contains a
 ### `set_content_widget_image`
 
 **Server:** merchant (`/mcp/client`)  
-**Costs credits:** only with `image_source="ai"` (2 credits per picture, quoted first)  
+**Costs credits:** only with `image_source="ai"` (quoted first, nothing spent until `cost_confirmed=true`)  
 **Destructive:** yes
 
 Replace the picture(s) of one widget on a product, category or blog article without touching its texts. Sources: stock (Pexels, free), uploaded (the entity media library, free — see list_content_image), image_bank (eshop public directory, free), ai (generated, PAID — the first call only quotes the price and writes nothing). image_index addresses one slot, counted the same way get_content_widget reports image_slot: every picture of the widget in document order, row icons included. Omit it to refill every slot. The change is versioned and can be undone with revert_content.
