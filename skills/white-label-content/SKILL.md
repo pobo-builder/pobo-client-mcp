@@ -200,11 +200,22 @@ undoing fifty entities by hand — and if it is lost, `list_entity_batch` finds 
 - `Eshop not found.` — not a white label e-shop, or not one this account owns;
   see the scope note in Prerequisites.
 - `Entity not found on this eshop.` (per entity) — the host's id does not exist
-  in Pobo yet. Entities are registered by the host's integration, by
-  `fill_design_content`, or by `compose_entity_content` — not by the widget
-  tools (`add_entity_widget` and friends require an entity that already
-  exists).
-- Widget template not in the catalog — re-run `get_entity_widget_catalog`.
+  in Pobo yet. **`create_entity` is the answer**: it registers the entity with
+  no template, which is what the host's own entities normally have. Reach for
+  `fill_design_content` instead only when the description really should follow
+  a template — it stamps that template onto the entity for good, and the
+  exported HTML then carries it as `data-pobo-design-id`.
+  (`compose_entity_content` also registers a missing entity on the fly; the
+  widget tools such as `add_entity_widget` do not.)
+- Widget template not in the catalog — re-run `get_entity_widget_catalog`. If a
+  widget the eshop clearly has is missing from it, the template has no AI
+  configuration on the Pobo side and nobody can fill it over MCP; say so rather
+  than substituting a different layout.
+- Wrong template on an entity — `set_entity_design` points it at another one, or
+  at none with `design_id: null`, which is how an entity gets back to the
+  default the host's other entities have. It changes the label only: the widgets
+  stay where they are. The previous value is versioned, so `revert_entity` puts
+  it back.
 - `At most N characters…` — a **hard** cap (65,000 characters) unrelated to the
   template; shorten the text, there is no way around it. Separately, if a
   response includes a `warning` about a role's length, the text **was
