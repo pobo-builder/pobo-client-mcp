@@ -15,6 +15,14 @@ an eshop on any other platform returns "Eshop not found."
 Every parameter, return value and constraint documented below comes from the
 server's own tool schema and description, not from guessing at intended behavior.
 
+75 tools in total — 60 on the merchant server, 17 on the white label one, with
+`list_eshop` and `list_design` served by both.
+
+**Changed on 2026-09-15:** the eleven `*_blog_*` widget tools were retired and
+replaced by the `*_content_*` set, which writes products, categories and blog
+articles through one `entity_type` parameter. See
+[Content](#content--products-categories-and-blog-articles).
+
 ## Contents
 
 - [Styling, products, labels and designs](#styling-products-labels-and-designs)
@@ -36,18 +44,31 @@ server's own tool schema and description, not from guessing at intended behavior
   - [`push_asset_css`](#push_asset_css)
   - [`screenshot_eshop_page`](#screenshot_eshop_page)
   - [`set_product_status`](#set_product_status)
+- [Content — products, categories and blog articles](#content--products-categories-and-blog-articles)
+  - [`add_content_product_carousel`](#add_content_product_carousel)
+  - [`add_content_widget`](#add_content_widget)
+  - [`compose_content`](#compose_content)
+  - [`convert_content_widget`](#convert_content_widget)
+  - [`copy_content_widget`](#copy_content_widget)
+  - [`edit_content_widget`](#edit_content_widget)
+  - [`get_content_history`](#get_content_history)
+  - [`get_content_widget`](#get_content_widget)
+  - [`get_content_widget_catalog`](#get_content_widget_catalog)
+  - [`import_content_image`](#import_content_image)
+  - [`list_content_batch`](#list_content_batch)
+  - [`list_content_image`](#list_content_image)
+  - [`move_content_widget`](#move_content_widget)
+  - [`remove_content_widget`](#remove_content_widget)
+  - [`render_content_html`](#render_content_html)
+  - [`revert_content`](#revert_content)
+  - [`set_content_widget_image`](#set_content_widget_image)
+  - [`update_content_meta`](#update_content_meta)
 - [Blog, prompts, generation and diagnostics](#blog-prompts-generation-and-diagnostics)
-  - [`add_blog_product_carousel`](#add_blog_product_carousel)
-  - [`add_blog_widget`](#add_blog_widget)
-  - [`convert_blog_widget`](#convert_blog_widget)
   - [`create_blog`](#create_blog)
   - [`create_prompt`](#create_prompt)
   - [`delete_prompt`](#delete_prompt)
-  - [`edit_blog_widget`](#edit_blog_widget)
   - [`generate_blog_article`](#generate_blog_article)
-  - [`get_blog_content`](#get_blog_content)
   - [`get_blog_generate_status`](#get_blog_generate_status)
-  - [`get_blog_widget_catalog`](#get_blog_widget_catalog)
   - [`get_credit`](#get_credit)
   - [`get_export_status`](#get_export_status)
   - [`get_generation`](#get_generation)
@@ -58,13 +79,8 @@ server's own tool schema and description, not from guessing at intended behavior
   - [`list_blog`](#list_blog)
   - [`list_generation`](#list_generation)
   - [`list_prompt`](#list_prompt)
-  - [`move_blog_widget`](#move_blog_widget)
   - [`preview_generation`](#preview_generation)
-  - [`remove_blog_widget`](#remove_blog_widget)
-  - [`review_blog`](#review_blog)
-  - [`set_blog_widget_image`](#set_blog_widget_image)
   - [`set_widget_prompt`](#set_widget_prompt)
-  - [`update_blog_title`](#update_blog_title)
   - [`update_prompt`](#update_prompt)
 - [White label content](#white-label-content)
   - [`add_entity_widget`](#add_entity_widget)
@@ -376,68 +392,330 @@ Switch the status of a batch of products between `ready` (approved for export) a
 **Returns:** `status` (the status applied), `product_count` (number updated).
 
 **Careful:** restricted in both directions — only `ready`/`draft` can be set, and only products currently in `ready` or `draft` can be switched; products in other pipeline states (`review`, `generate`) are refused. A single foreign, unknown, or non-switchable product id fails the whole call with no partial writes; the error lists the offending ids. Idempotent — setting the current status again is a no-op.
+## Content — products, categories and blog articles
+
+One set of tools writes the Pobo description of a **product, a category or a blog
+article** — every one of them takes `entity_type` (`product` | `category` | `blog`) and
+`entity_id`, the Pobo id from `list_product` / `list_category` / `list_blog`.
+
+They replaced the eleven `*_blog_*` widget tools on 2026-09-15. If an older integration
+still calls `add_blog_widget`, `get_blog_content`, `set_blog_widget_image`, `review_blog`,
+`update_blog_title` or their siblings, it will get "Tool not found" — the replacement is
+the same operation with `entity_type: "blog"`.
+
+Three things hold for the whole set:
+
+- **You write the texts, and that is free.** Nothing here calls a model. The only paid
+  thing is `image_source="ai"`, which quotes its price first and writes nothing until you
+  repeat the call with `cost_confirmed=true`.
+- **Every write is versioned.** `get_content_history` lists the versions of one entity,
+  `list_content_batch` the recent runs, and `revert_content` puts either back. A revert
+  saves the current state first, so it can itself be reverted.
+- **Nothing is published to the eshop platform.** The content stays in Pobo and the
+  merchant pushes it from the administration.
+
+Three calls destroy content and all three refuse to until you repeat them with
+`confirmed=true`: `remove_content_widget`, and `copy_content_widget` / `compose_content`
+in `mode="replace"`.
+
+### `add_content_product_carousel`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Put a carousel of real eshop products into the description of a product, category or blog article. Name the products by Pobo id (see find_product / list_product) or by their public URL; at most 10, and the names, prices, photos and links are taken from the eshop data, never written by you. position is 1-based; omit it to append at the end. Products that do not match are reported and the rest still goes in. Free, versioned, and undoable with revert_content.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity the carousel goes into is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of that entity. |
+| `product_id` | array of integer | no | Pobo ids of the products to show, 10 at most together with product_url. |
+| `product_url` | array of string | no | Public URLs of the products to show, as an alternative to product_id. |
+| `position` | integer | no | 1-based position in the description; omit to append at the end. |
+
+### `add_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Insert one widget, already filled with text you author, into a product, category or blog article. Content is keyed by the roles from get_content_widget_catalog; a repeatable widget takes {"items": [{role: value}, ...]} with DISTINCT items. position is 1-based and the rest moves down; omit it to append. The text is stored in EVERY language of the entity — call edit_content_widget with a lang afterwards to give one language its own wording. Active HTML in the text — script, iframe, img, inline event attributes — is removed before storage, with only formatting tags (headings, paragraphs, lists, tables, links) surviving; the response's content_sanitized is true when what got stored differs from what you sent, so check it before telling the merchant an image or embed made it in. Writing content this way is free, and the call is recorded under one batch_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `widget_id` | integer | yes | Template widget id from get_content_widget_catalog. |
+| `content` | object | yes | Values keyed by role, e.g. {"paragraph": "<h2>Heading</h2><p>Body</p>"}. Repeatable widgets: {"items": [{"author": "...", "text": "..."}, ...]}. |
+| `image_url` | array of string | no | https image URLs, assigned to the widget image slots in order. |
+| `icon_url` | array of string | no | https icon URLs, assigned to the widget icon slots in order. |
+| `position` | integer | no | 1-based position inside the entity; omit to append. |
+
+### `compose_content`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Build the whole description of one product, category or blog article in a single call: pick the widgets with get_content_widget_catalog, order them, write their texts. mode="replace" (the default) DELETES every widget the entity holds and leaves it with exactly what you send — that call writes NOTHING until you repeat it with confirmed=true. mode="append" keeps the current content and puts your widgets after it. The text is stored in EVERY language of the entity; use edit_content_widget with a lang afterwards to give one language its own wording. Active HTML in the text — script, iframe, img, inline event attributes — is removed before storage, with only formatting tags (headings, paragraphs, lists, tables, links) surviving; the response's content_sanitized is true when what got stored differs from what you sent. Either the whole plan is written or none of it is, and the call is recorded under one batch_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. It must exist — this tool never creates one. |
+| `widget` | array of object | yes | The blocks in order, 30 at most, each {"widget_id": int, "content": {role: value}, "image": [url], "icon": [url]}. |
+| `mode` | string | no | replace = the entity ends up holding exactly your widgets (default, needs confirmed=true); append = your widgets go after what is already there. One of: `append`, `replace`. |
+| `confirmed` | boolean | no | Required by mode=replace. Without it the call only reports how many widgets would be deleted. |
+
+### `convert_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** only with `image_source="ai"` (2 credits per picture, quoted first)  
+**Destructive:** yes
+
+Replace one widget of a product, category or blog article with a different template at the same position, carrying its texts over word for word. Read get_content_widget_catalog first and pass the target widget_id — this tool never picks a layout for you. Give image_query to fill the new layout's picture slots: stock (free), uploaded (the entity media library, free), image_bank (free), ai (PAID — the first call only quotes the price and changes nothing). Texts whose role the new template does not have are dropped, and the response lists them. Versioned and undoable with revert_content.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `widget_instance_id` | integer | yes | Which widget to convert (see get_content_widget). |
+| `widget_id` | integer | yes | Template to convert it into (see get_content_widget_catalog). |
+| `image_query` | string | no | Photo search query (stock) or generation prompt (ai) for the new layout's picture slots. Omit to leave them empty. |
+| `image_source` | string | no | Where the pictures come from; stock by default. One of: `stock`, `ai`, `uploaded`, `image_bank`. |
+| `cost_confirmed` | boolean | no | Required by image_source="ai" after the user confirmed the quoted cost. |
+
+### `copy_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Copy widgets from one product, category or blog article onto others of the same type. mode="append" adds them at the end and keeps what the target has. mode="replace" DELETES everything the target holds first — that call REMOVES NOTHING until you repeat it with confirmed=true. Pass widget_instance_id to copy only some widgets of the source. Up to 25 product targets or 50 category/blog targets per call; each target is reported on its own and a locked or refused one does not stop the rest. The run is recorded under one batch_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entities are — the source and every target share it. One of: `product`, `category`, `blog`. |
+| `source_entity_id` | integer | yes | Pobo id of the entity to copy FROM. |
+| `target_entity_id` | array of integer | yes | Pobo ids to copy TO: 25 at most for products, 50 for categories and blogs. |
+| `mode` | string | no | append = keep what the target has (default); replace = DELETE the target content first, needs confirmed=true. One of: `append`, `replace`. |
+| `widget_instance_id` | array of integer | no | Copy only these widgets of the source (see get_content_widget). Omit to copy all of them. |
+| `confirmed` | boolean | no | Required by mode=replace. Without it the call only reports what would be deleted. |
+
+### `edit_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Rewrite the texts of widgets that already sit on one product, category or blog article — one widget by widget_instance_id, or every instance of one template on that entity by widget_id. Only the roles you send change; the structure, the images and the other roles stay as they are. lang picks the language to rewrite and the other languages keep their own text, so this is how a translation gets its own wording. Active HTML in the text — script, iframe, img, inline event attributes — is removed before storage, with only formatting tags (headings, paragraphs, lists, tables, links) surviving; the response's content_sanitized is true when what got stored differs from what you sent, so check it before telling the merchant an image or embed made it in. Free, and the call is recorded under one batch_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `content` | object | yes | New values keyed by role. Repeatable widgets: {"items": [{role: value}, ...]} in template order. |
+| `widget_instance_id` | integer | no | Rewrite this one widget (from get_content_widget). Give this or widget_id, not both. |
+| `widget_id` | integer | no | Rewrite every instance of this template on the entity. Give this or widget_instance_id, not both. |
+| `lang` | string | no | Language key to rewrite; omit for the default. The other languages are left untouched. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
+
+### `get_content_history`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Versions of one product, category or blog article, newest first: version_id, when it was taken, which channel and tool caused it, how many widgets it holds and the batch_id of the run. A version is the state BEFORE that write, so reverting to it undoes the write. The editor writes versions too, not only these tools. Pass a version_id to revert_content.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
+| `limit` | integer | no | How many versions to return, 50 at most (default 20). |
+
+### `get_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+What one product, category or blog article currently holds: the ordered widget list with position, widget_instance_id, widget_id, template name, image slot count and the texts keyed by role, in document order. Read it before editing, moving or removing anything — widget_instance_id comes from here and from nowhere else.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
+| `lang` | string | no | Which language of the texts to show; omit for the default. Reading never writes. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
+
+### `get_content_widget_catalog`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Widget templates this eshop can place on a product, a category or a blog article — the same list for all three, entity_type only keeps the call shape uniform. Each entry carries its text roles (role, hint, max_length), its image and icon slot count and its item container count. Pick one and pass its widget_id to add_content_widget or compose_content; never guess a widget_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What you are going to build. The catalog is identical for all three. One of: `product`, `category`, `blog`. |
+
+### `import_content_image`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Copy a picture from a public https URL into the media library of one product, category or blog article, and get back its Pobo CDN url. You cannot send a file to this server — name the source and it is fetched. Redirects are not followed, private addresses are refused, the limit is 10 MB. Afterwards set_content_widget_image with image_source="uploaded" puts it into a widget.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity the picture belongs to. |
+| `image_url` | string | yes | Direct https URL of the image file. Must be the final URL — redirects are refused. |
+
+### `list_content_batch`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Recent runs of content changes on products, categories and blog articles of this eshop, newest first: batch_id, which tool and channel made it, when, how many entities it touched and a few of them by type and id. Runs made in the Pobo editor are listed too. Use it to find a run somebody wants undone — revert_content takes the batch_id and puts every entity of that run back.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `tool` | string | no | Only runs made by this tool, e.g. "compose_content". |
+| `limit` | integer | no | How many runs to return, 50 at most (default 20). |
+
+### `list_content_image`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Pictures already stored on one product, category or blog article: id, CDN url and format. These are what image_source="uploaded" puts into a widget. Use import_content_image to add one from a public https address.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
+
+### `move_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Move one widget to another place inside its product, category or blog article. Positions are 1-based and the rest closes up behind it, so position 1 puts the widget first. Nothing is deleted and no text changes; the call is recorded under one batch_id.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `widget_instance_id` | integer | yes | Widget instance id from get_content_widget. |
+| `position` | integer | yes | 1-based target position. A number past the end lands the widget last. |
+
+### `remove_content_widget`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+DELETES widgets from one product, category or blog article. Pick them by widget_instance_id (one widget), by widget_id (every instance of a template on that entity) or by query (every widget whose text contains it). The first call REMOVES NOTHING — it answers with what would go, and you repeat it with confirmed=true to do it. The run is recorded under one batch_id, and the remaining widgets close the gap.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `widget_instance_id` | integer | no | Remove this one widget (from get_content_widget). |
+| `widget_id` | integer | no | Remove every instance of this template on the entity. |
+| `query` | string | no | Remove every widget whose text contains this, ignoring case and diacritics. |
+| `confirmed` | boolean | no | false or omitted = preview only, nothing is deleted. true = delete. |
+
+### `render_content_html`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Render the description of one product, category or blog article as it is stored right now, and report its quality: rendered byte size, widget count, which widgets carry no text, and whether a Shoptet product is over the 65 000 byte limit that blocks further writes. Use it as the final check after building or editing content.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `lang` | string | no | Language to render; omit for the default. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
+
+### `revert_content`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Put content back the way it was. Either one entity to a version_id from get_content_history, or a whole run at once by its batch_id from list_content_batch — every product, category and blog article that run touched goes back to the state before it. The current state is saved as a new version first and the response carries the batch_id of the revert itself, so a revert can be reverted. An entity locked for writing (a cross-eshop mirror target) is refused on its own and skipped inside a batch, never silently overwritten.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | no | What the entity is. Give it together with entity_id and version_id. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | no | Pobo id of the entity to revert. |
+| `version_id` | integer | no | Version to go back to (see get_content_history). |
+| `batch_id` | string | no | Revert a whole run instead of one entity — every entity it touched goes back to the state before it. |
+
+### `set_content_widget_image`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** only with `image_source="ai"` (2 credits per picture, quoted first)  
+**Destructive:** yes
+
+Replace the picture(s) of one widget on a product, category or blog article without touching its texts. Sources: stock (Pexels, free), uploaded (the entity media library, free — see list_content_image), image_bank (eshop public directory, free), ai (generated, PAID — the first call only quotes the price and writes nothing). image_index addresses one slot, counted the same way get_content_widget reports image_slot: every picture of the widget in document order, row icons included. Omit it to refill every slot. The change is versioned and can be undone with revert_content.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `widget_instance_id` | integer | yes | Which widget to change (see get_content_widget). |
+| `image_query` | string | yes | Photo search query (stock) or generation prompt (ai). Ignored by uploaded and image_bank, which take what the library holds. |
+| `image_source` | string | no | Where the pictures come from; stock by default. One of: `stock`, `ai`, `uploaded`, `image_bank`. |
+| `image_index` | integer | no | 1-based picture slot to replace; omit to replace all of them. |
+| `cost_confirmed` | boolean | no | Required by image_source="ai" after the user confirmed the quoted cost. |
+
+### `update_content_meta`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Set the name and the SEO fields (seo_title, seo_description, and short_description on products and categories) of one product, category or blog article, in one language. Which of them can be written depends on the eshop export mode: in SEO mode all of them, in FULL mode the name and the short description, in MINIMAL mode none — there the platform is master and the next import would overwrite whatever you wrote. A refused field is named in the response together with the mode that would allow it, and the rest is still written. The URL is never writable. This does not push anything to the eshop platform.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `lang` | string | no | Which language to write; omit for the default one. Other languages keep their own text. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
+| `name` | string | no | Entity name. |
+| `seo_title` | string | no | Title tag. |
+| `seo_description` | string | no | Meta description. |
+| `short_description` | string | no | Short description; products and categories only. |
+
 ## Blog, prompts, generation and diagnostics
-
-### `add_blog_product_carousel`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Inserts a product carousel into a blog article, filled from real shop data (photo, name, price, link). Products resolve by Pobo id or a pasted public product URL.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `product_id` | array of integer | no | Pobo product ids (see `find_product`); max 10 items. |
-| `product_url` | array of string | no | Public product URLs on the eshop; max 10 items. |
-| `position` | integer | no | 1-based position in the article; omit to append. Min 1. |
-| `lang` | string (enum) | no | Content language; omit for the eshop default. |
-
-**Returns:** `blog_id` and a `summary` string describing what was inserted.
-
-**Careful:** at least one of `product_id` or `product_url` must be given — the tool errors if both are empty; this is enforced in `handle()`, not in the schema.
-
-### `add_blog_widget`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Inserts a widget into a blog article filled with content the agent authors itself (the Claude-as-author path — deterministic filler, no server-side LLM call). Content is keyed by the roles from `get_blog_widget_catalog`.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog` / `create_blog`). |
-| `widget_id` | integer | yes | Template widget id from `get_blog_widget_catalog`. |
-| `content` | object | yes | Values keyed by role, e.g. `{"paragraph": "<h2>Heading</h2><p>Body</p>"}`. Repeatable widgets: `{"items": [{role: value}, ...]}` with distinct items. |
-| `image_url` | array of string | no | CDN image URLs assigned sequentially to the widget's image slots. |
-| `position` | integer | no | 1-based position in the article; omit to append. Min 1. |
-| `lang` | string (enum) | no | Content language; omit for the eshop default. |
-
-**Returns:** `blog_id`, `widget_instance_id`, and the widget's 1-based `position`.
-
-### `convert_blog_widget`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** yes — only when `image_source=ai`: 1 photo × 2 credits = 2 credits. The first call without `cost_confirmed=true` returns a `confirm_required` quote instead of executing; the agent must relay the price and re-call with `cost_confirmed=true`. Sources `stock`, `uploaded`, `image_bank` are free.
-
-Converts a text widget of a blog article into an image+text layout: its texts carry over verbatim and a photo is resolved from the chosen source.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `widget_instance_id` | integer | yes | Widget instance id from `get_blog_content`. |
-| `image_query` | string | yes | Photo search query (`stock`) or generation prompt (`ai`). Max 300 chars. |
-| `image_side` | string (enum: `left`, `right`) | no | Where the photo should sit. Default `right`. |
-| `image_source` | string (enum: `stock`, `ai`, `uploaded`, `image_bank`) | no | Photo source. Default `stock`. |
-| `lang` | string (enum) | no | Content language; omit for the eshop default. |
-| `cost_confirmed` | boolean | no | Set true after the user confirmed the quoted AI photo cost. Default false. |
-
-**Returns:** `blog_id`, a `summary` string, and `widget` (a snapshot of the article's widgets).
-
-**Careful:** replaces the widget's layout (text preserved, but the shape changes from text-only to image+text); with `image_source=ai` it is paid and refused with `Not enough credits...` if the eshop's balance is below the quoted cost.
 
 ### `create_blog`
 
@@ -486,29 +764,10 @@ Deletes a custom prompt profile from an eshop. Its per-widget instructions are r
 
 **Careful:** destructive — when `action` is `"deleted"` the prompt itself is soft-deleted, not just unlinked.
 
-### `edit_blog_widget`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Rewrites the text content of an existing widget in a blog article with values the agent authors, keyed by role. A deterministic, structure-preserving rewrite: only the target language key of matched value maps changes — other translations, images and non-matched nodes stay untouched.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `widget_instance_id` | integer | yes | Widget instance id from `get_blog_content`. |
-| `content` | object | yes | New values keyed by role, e.g. `{"paragraph": "<p>New body</p>"}`. Repeatable widgets: `{"items": [{role: value}, ...]}`. |
-| `lang` | string (enum) | no | Language key to rewrite; omit for the default content. Other languages stay untouched. |
-
-**Returns:** `blog_id`, `widget_instance_id`, `updated: true`.
-
-**Careful:** returns an error if no editable field matched the given content roles — check `get_blog_widget_catalog` for the widget's actual roles.
-
 ### `generate_blog_article`
 
 **Server:** merchant (`/mcp/client`)
-**Costs credits:** yes — 1 credit per article, always. When `photo_source=ai`, add 2 credits per AI photo (`image_count × 2`); `image_count` is required in that case so the cost can be quoted, and the first call without `cost_confirmed=true` returns a `confirm_required` quote that must be relayed to the user before re-calling with `cost_confirmed=true`. Non-AI photo sources do not require confirmation, but the 1-credit article cost still applies and the call is refused if the eshop cannot cover it. Free alternative: author the texts with `add_blog_widget`.
+**Costs credits:** yes — 1 credit per article, always. When `photo_source=ai`, add 2 credits per AI photo (`image_count × 2`); `image_count` is required in that case so the cost can be quoted, and the first call without `cost_confirmed=true` returns a `confirm_required` quote that must be relayed to the user before re-calling with `cost_confirmed=true`. Non-AI photo sources do not require confirmation, but the 1-credit article cost still applies and the call is refused if the eshop cannot cover it. Free alternative: author the texts yourself with `add_content_widget` / `compose_content` using `entity_type: "blog"`.
 
 Generates a whole blog article server-side from a brief. Asynchronous — dispatches a job on the `generator` queue; poll with `get_blog_generate_status`.
 
@@ -534,20 +793,6 @@ Generates a whole blog article server-side from a brief. Asynchronous — dispat
 
 **Careful:** `remove_exist_widget=true` replaces the article's existing content instead of appending to it. The tool also refuses to run when the AI-content-generation kill switch is off, and when `structure_mode=template` without `design_id`.
 
-### `get_blog_content`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Numbered snapshot of one blog article: title plus the ordered widget list (position, widget_instance_id, name, text preview, image slot count). Call before editing widgets so ids and positions resolve without guessing.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-
-**Returns:** `blog_id`, `name`, and `widget` (the ordered snapshot array).
-
 ### `get_blog_generate_status`
 
 **Server:** merchant (`/mcp/client`)
@@ -562,19 +807,6 @@ Polls a running article generation job started by `generate_blog_article`. Steps
 | `job_id` | integer | yes | Job id returned by `generate_blog_article`. |
 
 **Returns:** `job_id`, `blog_id`, `status`, `progress`, `step`, `widgets_created`, `error_message`, `title` (from the generated response, when available).
-
-### `get_blog_widget_catalog`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Lists the widgets an eshop can place into a blog article, with their AI slot schema: text roles (role, hint, max_length), image slot count and item container count.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-
-**Returns:** `widget` — array of widget slot descriptions (one per placeable widget).
 
 ### `get_credit`
 
@@ -729,22 +961,6 @@ Lists the custom AI generation prompt profiles of an eshop (id, name, linked des
 
 **Careful:** the full prompt text is deliberately excluded (it can be up to 1 MB) — use `get_prompt` to read it.
 
-### `move_blog_widget`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Moves a widget of a blog article to another 1-based position and resequences the article.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `widget_instance_id` | integer | yes | Widget instance id from `get_blog_content`. |
-| `position` | integer | yes | Target 1-based position. Min 1. |
-
-**Returns:** `blog_id`, `widget_instance_id`, `position`, and `widget` (a snapshot of the article's widgets).
-
 ### `preview_generation`
 
 **Server:** merchant (`/mcp/client`)
@@ -772,59 +988,6 @@ Dry-runs a product description generation against a design and a prompt without 
 
 **Careful:** refused with an error when the AI-content-generation kill switch is off — this can look like a bug rather than a maintenance window.
 
-### `remove_blog_widget`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Removes a widget from a blog article and resequences the remaining positions.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `widget_instance_id` | integer | yes | Widget instance id from `get_blog_content`. |
-
-**Returns:** `blog_id`, `widget_instance_id`, `removed: true`.
-
-**Careful:** deletes the widget outright — there is no undo tool in this set.
-
-### `review_blog`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Renders a blog article and returns its quality report (rendered size, widget count, empty slots). Use as the final check after authoring or editing.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `lang` | string (enum) | no | Language to render; omit for the default. |
-
-**Returns:** `lang`, `html` (rendered output), `byte_size`, `byte_limit`, `over_limit` (bool), `widget_count`, `empty_text_slot`, `empty_image_slot`, `warning` (array of human-readable issues, e.g. over the size limit or empty slots).
-
-### `set_blog_widget_image`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** yes — only when `image_source=ai`: 2 credits per photo slot replaced (1 slot if `image_index` is given, otherwise every slot in the widget). The first call without `cost_confirmed=true` returns a `confirm_required` quote; re-call with `cost_confirmed=true` after the user confirms. Sources `stock`, `uploaded`, `image_bank` are free.
-
-Replaces the photo(s) of an existing widget in a blog article without touching its texts.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `widget_instance_id` | integer | yes | Widget instance id from `get_blog_content`. |
-| `image_query` | string | yes | Photo search query (`stock`) or generation prompt (`ai`). Max 300 chars. |
-| `image_source` | string (enum: `stock`, `ai`, `uploaded`, `image_bank`) | no | Photo source. Default `stock`. |
-| `image_index` | integer | no | 1-based photo slot to replace; omit to replace all of them. Min 1. |
-| `cost_confirmed` | boolean | no | Set true after the user confirmed the quoted AI photo cost. Default false. |
-
-**Returns:** `blog_id`, `widget_instance_id`, and a `summary` string.
-
-**Careful:** replaces the existing photo(s) outright (no side-by-side compare); with `image_source=ai` it is paid and refused if the eshop's credit balance cannot cover the quoted cost.
-
 ### `set_widget_prompt`
 
 **Server:** merchant (`/mcp/client`)
@@ -841,23 +1004,6 @@ Replaces ALL explicit per-widget instructions of a custom prompt profile in one 
 **Returns:** `action: "replaced"`, `prompt_id`, `widget_prompt_count`.
 
 **Careful:** replace-all semantics — every call defines the *complete* set; anything omitted is deleted, not left alone. Fails if the prompt has no `design_id` (set one first via `update_prompt`).
-
-### `update_blog_title`
-
-**Server:** merchant (`/mcp/client`)
-**Costs credits:** no
-
-Sets the title (and optionally the SEO title) of a blog article.
-
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `eshop_id` | integer | yes | Eshop id (see `list_eshop`). |
-| `blog_id` | integer | yes | Blog id (see `list_blog`). |
-| `title` | string | yes | New article title. Max 255 chars. |
-| `seo_title` | string | no | Optional SEO title. Max 255 chars. |
-| `lang` | string (enum) | no | Language of the title; omit for the default. |
-
-**Returns:** `blog_id`, `changed` (bool), `summary`.
 
 ### `update_prompt`
 

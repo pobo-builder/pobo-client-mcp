@@ -1,6 +1,6 @@
 ---
 name: write-blog
-description: Write and edit Pobo Page Builder blog articles — compose an article yourself from widget templates, rewrite existing sections, insert photos and real product carousels, or hand the whole thing to Pobo's server-side generator. Use when the user wants a blog post, magazine article, buying guide or landing text on their e-shop: "write an article about…", "edit that blog post", "add photos to the article", "insert products into the article". Uses the `pobo` MCP server tools.
+description: Write and edit Pobo Page Builder descriptions — compose a blog article, a product description or a category text from widget templates, rewrite existing sections, insert photos and real product carousels, or hand a whole article to Pobo's server-side generator. Use when the user wants a blog post, magazine article, buying guide, landing text, or the description of a product or category: "write an article about…", "edit that blog post", "write descriptions for these products", "add photos to the article". Uses the `pobo` MCP server tools.
 ---
 
 # Write Pobo Page Builder blog articles
@@ -48,11 +48,18 @@ user should never be surprised by a credit charge.
 `list_eshop` → `list_blog` (existing articles, with `widget_count` and
 `is_visible`) or `create_blog` for a new one.
 
-`get_blog_widget_catalog` is the step people skip and then guess. It returns the
-widget templates this e-shop actually has, and for each one its content roles —
-the named slots you fill (`role`, `hint`, `max_length`, `image_slot`,
-`item_count`). **You can only use widgets from this catalog**; anything else is
-an error.
+**The same tools write products and categories.** Every widget tool below takes
+`entity_type` (`product` | `category` | `blog`) and `entity_id`; an article is
+simply `entity_type: "blog"`. Products and categories are not created here —
+they arrive from the shop platform, so resolve them with `list_product` /
+`find_product` / `list_category`. A blog article is the one entity you may
+create yourself.
+
+`get_content_widget_catalog` is the step people skip and then guess. It returns
+the widget templates this e-shop actually has, and for each one its content
+roles — the named slots you fill (`role`, `hint`, `max_length`, `image_slot`,
+`icon_slot`, `item_count`). **You can only use widgets from this catalog**;
+anything else is an error.
 
 ### 2. Plan the article before writing into it
 
@@ -64,34 +71,55 @@ error or warning back to you. Keep copy inside `max_length` yourself.
 
 ### 3. Write and place
 
-`add_blog_widget` inserts a widget with `content` keyed by role — either
+`add_content_widget` inserts one widget with `content` keyed by role — either
 `{role: value}` for a simple widget or `{"items": [...]}` for a repeatable one.
-Optional `position` places it; optional `image_url[]` fills image slots.
+Optional `position` places it (1-based); optional `image_url[]` fills image slots.
+
+`compose_content` writes the **whole** description in one call when it should not
+grow block by block. Its default `mode` is `replace`, which empties the entity
+first — that call writes nothing until you repeat it with `confirmed: true`, and
+you should say what would be deleted before you do.
 
 **Repeatable widgets need genuinely DISTINCT items.** Three benefit tiles that
-say the same thing three ways is the most common failure of AI-written articles;
+say the same thing three ways is the most common failure of AI-written text;
 if you cannot think of a third distinct point, use a widget with two slots.
 
-`edit_blog_widget` rewrites an existing widget by role. It is
-structure-preserving and only touches the target language, so translations and
-photos survive an edit.
+`edit_content_widget` rewrites an existing widget by role. It is
+structure-preserving, and with `lang` it touches only that language, so
+translations and photos survive an edit. Note the difference: `add_content_widget`
+and `compose_content` store the text in **every** language of the entity, and
+`edit_content_widget` with a `lang` is how one language gets its own wording.
 
-Call `get_blog_content` before any edit — it returns a numbered snapshot with
+**Check `content_sanitized` in the response.** Active HTML — `script`, `iframe`,
+`img`, inline event attributes — is stripped before storage. When the flag is
+true, what got stored differs from what you sent; do not tell the user an image
+or an embed made it in without looking.
+
+Call `get_content_widget` before any edit — it returns a numbered snapshot with
 `position` and `widget_instance_id`, which is what the edit and move tools
 address. Editing from memory of an earlier snapshot is how you overwrite the
 wrong widget.
 
 ### 4. Arrange and enrich
 
-- `move_blog_widget` reorders; it returns a fresh snapshot.
-- `remove_blog_widget` deletes one — destructive, so confirm with the user first.
-- `update_blog_title` overwrites the title and SEO title together.
-- `add_blog_product_carousel` inserts **real products** from the shop, addressed
-  by `product_id[]` and/or `product_url[]` (at most 10 each). Prefer this over
-  writing product names into prose — the carousel stays correct when prices and
-  stock change.
-- `set_blog_widget_image` fills an image slot; `convert_blog_widget` turns a
-  text widget into an image+text layout, keeping the texts verbatim.
+- `move_content_widget` reorders (1-based positions).
+- `remove_content_widget` deletes — destructive, and its first call only returns
+  a preview; it removes nothing until you repeat it with `confirmed: true`.
+- `copy_content_widget` puts one entity's widgets onto others of the same type —
+  up to 25 products or 50 categories / articles in one call.
+- `update_content_meta` writes the name and the SEO fields. **It will refuse
+  fields the shop platform is master of**, and say which export mode would allow
+  them; that is not a bug, it is the tool declining to write a value the next
+  import would overwrite. In practice most e-shops cannot write SEO fields here.
+- `add_content_product_carousel` inserts **real products** from the shop,
+  addressed by `product_id[]` and/or `product_url[]` (at most 10 each). Prefer
+  this over writing product names into prose — the carousel stays correct when
+  prices and stock change.
+- `list_content_image` is the entity's picture library and `import_content_image`
+  copies one in from a public https address; `set_content_widget_image` fills the
+  slots, and `convert_content_widget` turns a widget into another template of the
+  catalog, keeping the texts verbatim (pass the target `widget_id` — it never
+  picks a layout for you).
 
 ### 5. Photos and what they cost
 
@@ -109,9 +137,21 @@ the balance cannot cover.
 
 ### 6. Review
 
-`review_blog` renders the article and returns a quality report: `byte_size`,
-empty slots and warnings. Fix empty slots before telling the user you are done —
-an unfilled role renders as a gap on the live page.
+`render_content_html` renders the description and returns a quality report:
+`byte_size`, empty slots and warnings. Fix empty slots before telling the user
+you are done — an unfilled role renders as a gap on the live page. A Shoptet
+**product** over 65 000 bytes takes no further content at all, and the report is
+where you see that coming.
+
+### 7. Undo
+
+Every write is versioned, including the ones made in the Pobo editor.
+`get_content_history` lists the versions of one entity, `list_content_batch` the
+recent runs across the e-shop, and `revert_content` puts either back — one entity
+to a `version_id`, or a whole run by its `batch_id`. A revert saves the current
+state first and hands back its own `batch_id`, so it can itself be reverted.
+This is the honest answer to "undo that" — never re-type the old text from
+memory when a version holds it.
 
 ## Workflow — server-side generation
 
@@ -125,9 +165,9 @@ an unfilled role renders as a gap on the live page.
 - It returns a `job_id`. Poll `get_blog_generate_status`; the `step` values are
   `preparing` → `writing` → `selecting_photos` → `composing` → `done`. Report
   progress in those terms rather than repeating "still running".
-- When it finishes, review it like your own work: `get_blog_content` and
-  `review_blog`, and offer to fix weak sections with `edit_blog_widget` — which
-  is free.
+- When it finishes, review it like your own work: `get_content_widget` and
+  `render_content_html`, and offer to fix weak sections with
+  `edit_content_widget` — which is free.
 
 ## Writing quality
 
@@ -147,7 +187,10 @@ The widgets give the article its shape; you still have to make it worth reading.
 - `Eshop not found.` / `Blog not found.` — wrong id, or it belongs to a
   different e-shop; re-run `list_eshop` / `list_blog`.
 - Widget not in the catalog — you used a template this e-shop does not have;
-  re-run `get_blog_widget_catalog`.
+  re-run `get_content_widget_catalog`.
+- `Tool not found` on `add_blog_widget`, `get_blog_content`, `review_blog`,
+  `update_blog_title` or any other `*_blog_*` widget tool — those were retired on
+  2026-09-15. The replacement is the same operation with `entity_type: "blog"`.
 - Validation error on `content` roles — the role names must match the catalog
   exactly, and repeatable widgets take `items`, not a flat map.
 - `confirm_required: true` — not an error; see step 5.
