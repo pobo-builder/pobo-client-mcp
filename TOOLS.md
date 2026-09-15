@@ -15,7 +15,7 @@ an eshop on any other platform returns "Eshop not found."
 Every parameter, return value and constraint documented below comes from the
 server's own tool schema and description, not from guessing at intended behavior.
 
-75 tools in total — 60 on the merchant server, 17 on the white label one, with
+80 tools in total — 63 on the merchant server, 19 on the white label one, with
 `list_eshop` and `list_design` served by both.
 
 **Changed on 2026-09-15:** the eleven `*_blog_*` widget tools were retired and
@@ -50,10 +50,12 @@ articles through one `entity_type` parameter. See
   - [`compose_content`](#compose_content)
   - [`convert_content_widget`](#convert_content_widget)
   - [`copy_content_widget`](#copy_content_widget)
+  - [`delete_content_image`](#delete_content_image)
   - [`edit_content_widget`](#edit_content_widget)
   - [`get_content_history`](#get_content_history)
   - [`get_content_widget`](#get_content_widget)
   - [`get_content_widget_catalog`](#get_content_widget_catalog)
+  - [`get_platform_content`](#get_platform_content)
   - [`import_content_image`](#import_content_image)
   - [`list_content_batch`](#list_content_batch)
   - [`list_content_image`](#list_content_image)
@@ -61,6 +63,7 @@ articles through one `entity_type` parameter. See
   - [`remove_content_widget`](#remove_content_widget)
   - [`render_content_html`](#render_content_html)
   - [`revert_content`](#revert_content)
+  - [`search_content`](#search_content)
   - [`set_content_widget_image`](#set_content_widget_image)
   - [`update_content_meta`](#update_content_meta)
 - [Blog, prompts, generation and diagnostics](#blog-prompts-generation-and-diagnostics)
@@ -86,6 +89,7 @@ articles through one `entity_type` parameter. See
   - [`add_entity_widget`](#add_entity_widget)
   - [`compose_entity_content`](#compose_entity_content)
   - [`copy_entity_widget`](#copy_entity_widget)
+  - [`create_entity`](#create_entity)
   - [`edit_entity_widget`](#edit_entity_widget)
   - [`fill_design_content`](#fill_design_content)
   - [`get_design_structure`](#get_design_structure)
@@ -98,6 +102,7 @@ articles through one `entity_type` parameter. See
   - [`move_entity_widget`](#move_entity_widget)
   - [`remove_entity_widget`](#remove_entity_widget)
   - [`revert_entity`](#revert_entity)
+  - [`set_entity_design`](#set_entity_design)
 - [Description automation](#description-automation)
   - [`create_automation_rule`](#create_automation_rule)
   - [`get_automation_rule`](#get_automation_rule)
@@ -414,9 +419,13 @@ Three things hold for the whole set:
 - **Nothing is published to the eshop platform.** The content stays in Pobo and the
   merchant pushes it from the administration.
 
-Three calls destroy content and all three refuse to until you repeat them with
-`confirmed=true`: `remove_content_widget`, and `copy_content_widget` / `compose_content`
-in `mode="replace"`.
+Three calls destroy content, and all three answer the first call with a preview instead
+of doing it: `remove_content_widget`, and `copy_content_widget` / `compose_content` in
+`mode="replace"`. The preview hands back a **`confirm_token`**, and the second call has to
+send it together with `confirmed=true`. The token is a fingerprint of that run, recomputed
+when you confirm — so if the entity changed in between, it no longer matches and the call is
+refused. That is not a permission error; it means what you were shown is no longer what
+would happen, and the answer is to preview again.
 
 ### `add_content_product_carousel`
 
@@ -469,6 +478,7 @@ Build the whole description of one product, category or blog article in a single
 | `entity_id` | integer | yes | Pobo id of the entity. It must exist — this tool never creates one. |
 | `widget` | array of object | yes | The blocks in order, 30 at most, each {"widget_id": int, "content": {role: value}, "image": [url], "icon": [url]}. |
 | `mode` | string | no | replace = the entity ends up holding exactly your widgets (default, needs confirmed=true); append = your widgets go after what is already there. One of: `append`, `replace`. |
+| `confirm_token` | string | no | The confirm_token the preview returned. Required together with confirmed=true. |
 | `confirmed` | boolean | no | Required by mode=replace. Without it the call only reports how many widgets would be deleted. |
 
 ### `convert_content_widget`
@@ -506,7 +516,23 @@ Copy widgets from one product, category or blog article onto others of the same 
 | `target_entity_id` | array of integer | yes | Pobo ids to copy TO: 25 at most for products, 50 for categories and blogs. |
 | `mode` | string | no | append = keep what the target has (default); replace = DELETE the target content first, needs confirmed=true. One of: `append`, `replace`. |
 | `widget_instance_id` | array of integer | no | Copy only these widgets of the source (see get_content_widget). Omit to copy all of them. |
+| `confirm_token` | string | no | The confirm_token the preview returned. Required together with confirmed=true. |
 | `confirmed` | boolean | no | Required by mode=replace. Without it the call only reports what would be deleted. |
+
+### `delete_content_image`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Remove a picture from the media library of one product, category or blog article — for instance one imported by mistake. It is refused while a widget of that entity still uses the picture: change or remove that widget first with set_content_widget_image or remove_content_widget. The file itself stays on the CDN, because widgets elsewhere may point at it; this only takes it out of the library that list_content_image shows.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity the picture belongs to. |
+| `image_id` | integer | yes | Which picture (see list_content_image). |
 
 ### `edit_content_widget`
 
@@ -547,13 +573,14 @@ Versions of one product, category or blog article, newest first: version_id, whe
 **Costs credits:** no  
 **Destructive:** no  (read-only)
 
-What one product, category or blog article currently holds: the ordered widget list with position, widget_instance_id, widget_id, template name, image slot count and the texts keyed by role, in document order. Read it before editing, moving or removing anything — widget_instance_id comes from here and from nowhere else.
+What a product, category or blog article currently holds: the ordered widget list with position, widget_instance_id, widget_id, template name, image slot count and the texts keyed by role, in document order. Read it before editing, moving or removing anything — widget_instance_id comes from here and from nowhere else. Pass entity_id for one entity or entity_id_list for up to 25 at once, which is how you look at a whole batch before copying onto it. Each entity also reports language, saying how many text values each of its languages has filled and how many are still empty.
 
 | Parameter | Type | Required | Notes |
 |---|---|---|---|
 | `eshop_id` | integer | yes | Eshop id (see list_eshop). |
 | `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
-| `entity_id` | integer | yes | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). |
+| `entity_id` | integer | no | Pobo id of the product (list_product), category (list_category) or blog article (list_blog). Give this or entity_id_list. |
+| `entity_id_list` | array of integer | no | Several entities at once, 25 at most — the alternative to entity_id. |
 | `lang` | string | no | Which language of the texts to show; omit for the default. Reading never writes. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
 
 ### `get_content_widget_catalog`
@@ -568,6 +595,22 @@ Widget templates this eshop can place on a product, a category or a blog article
 |---|---|---|---|
 | `eshop_id` | integer | yes | Eshop id (see list_eshop). |
 | `entity_type` | string | yes | What you are going to build. The catalog is identical for all three. One of: `product`, `category`, `blog`. |
+
+### `get_platform_content`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+The description the entity has on the shop platform itself — what a customer reads there today, as opposed to the Pobo content the other tools write. Read it before rewriting anything: it usually holds facts that exist nowhere else (dimensions, materials, compatibility, what is in the box), and a rewrite that ignores it quietly drops them. HTML tags are stripped and the text is shortened to a readable length; original_length says how long it really is, and truncated says whether you are seeing all of it. It also returns the platform name and SEO fields, which is what update_content_meta will often refuse to change.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`. |
+| `entity_id` | integer | yes | Pobo id of the entity. |
+| `lang` | string | no | Which language version to read; omit for the default. One of: `default`, `cs`, `sk`, `en`, `de`, `pl`, `hu`. |
+| `length` | integer | no | How many characters of the description to return, 40000 at most (default 6000). Raise it only when the shortened text is not enough. |
 
 ### `import_content_image`
 
@@ -644,6 +687,7 @@ DELETES widgets from one product, category or blog article. Pick them by widget_
 | `widget_instance_id` | integer | no | Remove this one widget (from get_content_widget). |
 | `widget_id` | integer | no | Remove every instance of this template on the entity. |
 | `query` | string | no | Remove every widget whose text contains this, ignoring case and diacritics. |
+| `confirm_token` | string | no | The confirm_token the preview returned. Required together with confirmed=true. |
 | `confirmed` | boolean | no | false or omitted = preview only, nothing is deleted. true = delete. |
 
 ### `render_content_html`
@@ -676,6 +720,21 @@ Put content back the way it was. Either one entity to a version_id from get_cont
 | `entity_id` | integer | no | Pobo id of the entity to revert. |
 | `version_id` | integer | no | Version to go back to (see get_content_history). |
 | `batch_id` | string | no | Revert a whole run instead of one entity — every entity it touched goes back to the state before it. |
+
+### `search_content`
+
+**Server:** merchant (`/mcp/client`)  
+**Costs credits:** no  
+**Destructive:** no  (read-only)
+
+Find the products, categories or blog articles whose Pobo description contains a phrase — the text of the widgets, which list_product does not search. Matching ignores case and accents, and every language of the entity is searched, so a phrase found only in the German version still finds the entity. Use it for "which products still mention the old price" before rewriting them. Very large eshops are refused rather than half-searched; the message says so.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_type` | string | yes | What to search through. One of: `product`, `category`, `blog`. |
+| `query` | string | yes | The phrase to look for. Case and accents are ignored. |
+| `limit` | integer | no | How many entities to return, 100 at most (default 25). |
 
 ### `set_content_widget_image`
 
@@ -1092,6 +1151,21 @@ Copies widgets from one source entity to up to 50 target entities, optionally re
 
 **Careful:** `mode=replace` force-deletes the target entity's existing widgets before copying in the source's widgets — the tool description explicitly tells the caller to state which mode it is about to use before calling. A target that is the same entity as the source is rejected per-entity with an error, not treated as a no-op.
 
+### `create_entity`
+
+**Server:** white label (`/mcp/whitelabel`)  
+**Costs credits:** no  
+**Destructive:** no
+
+Register a product, category, blog article or page of the host in Pobo so content tools can write to it, without giving it a description template. Use it when add_entity_widget or compose_entity_content answers "Entity not found" — that means Pobo has not seen this entity_id yet. The entity is created with no template, which is what the host's own entities normally have; fill_design_content is the call to use instead when the description SHOULD follow a template. Registering an entity that already exists changes nothing and returns it.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_id` | string | yes | Host id of the entity — the same id the host uses in its own system and in the SDK. |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`, `page`. |
+| `title` | string | no | Entity name, for the listing in the Pobo administration. Optional. |
+
 ### `edit_entity_widget`
 
 **Server:** white label (`/mcp/whitelabel`)
@@ -1308,6 +1382,20 @@ Either `batch_id` alone, or `entity_id` + `entity_type` + `version_id` together,
 
 **Careful:** reverting overwrites the entity's current widget content with the older version's content — the current state is saved as a new version first (so a revert is itself revertible), but the effect is still a full replace of what's there now.
 
+### `set_entity_design`
+
+**Server:** white label (`/mcp/whitelabel`)  
+**Costs credits:** no  
+**Destructive:** yes
+
+Say which description template an entity uses, or take the template off it. The exported HTML carries this as data-pobo-design-id, so an entity that once went through fill_design_content keeps announcing that template until you change it here. Send design_id to point it at a template, or design_id=null to put it back to the default the host's own entities have. This only changes the label: the widgets stay exactly as they are, so use fill_design_content when the content itself should follow a template. The previous value is versioned and revert_entity puts it back.
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `eshop_id` | integer | yes | Eshop id (see list_eshop). |
+| `entity_id` | string | yes | Host id of the entity (see list_entity). |
+| `entity_type` | string | yes | What the entity is. One of: `product`, `category`, `blog`, `page`. |
+| `design_id` | integer | no | Template to point the entity at (see list_design). Send null to remove the template and go back to the default. |
 ## Description automation
 
 ### `create_automation_rule`
