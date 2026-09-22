@@ -11,6 +11,14 @@ read the e-shop's design, write the SCSS, push it, and iterate.
 
 Communicate with the user in their language (typically Czech).
 
+Two reference files sit next to this skill and are shared with `design-description`:
+
+- `runtime.md` — what the CSS asset can and cannot do (load order, fonts, allowed
+  `url()`, empty slots) and where the variables the contract does not return live.
+- `widgets.md` — catalog widget id → `widget-*` block → variable prefixes → slots.
+
+Read `runtime.md` before writing SCSS.
+
 ## Prerequisites & auth
 
 The `pobo` MCP server is connected once via OAuth — the user runs
@@ -46,8 +54,21 @@ Call `get_theming_contract`. It returns:
   `-before-*` / `-after-*` for pseudo-elements.
 - `widget_block` — ~80 native BEM blocks usable as selectors (block `.widget-infobox`,
   elements like `.widget-infobox__title`).
-- `declared_on` — where the variables are declared (`:root`). **Overrides must also be
-  written on `:root`.**
+- `declared_on` — where the variables are declared (`:root`).
+
+**Write your overrides on `:root #pobo-all-content`, not on plain `:root`.** The AI
+asset loads before `generic.css`, so a plain `:root` override loses to the later
+declaration (see `runtime.md`, verified on a live page).
+
+**The contract is incomplete.** It returns the widget container variables
+(`--pobo-widget-<block>-{bg,padding,margin,border-radius,box-shadow,before-*,after-*}`)
+and three globals only. Typography (`--pobo-font-family`, `--pobo-typo-*`), links
+(`--pobo-link-*`), buttons (`--pobo-btn-*`), the surface (`--pobo-all-content-*`)
+and the element-level variables of each block (`--pobo-counter-*`, `--pobo-faq-*`,
+…) exist in `generic.css` but are not listed. `runtime.md` names them and shows
+how to list a block's element variables in one command. Prefer them over direct
+`.widget-*` rules; the contract alone would push you into direct rules for every
+font size and color.
 
 Keep the variables and blocks relevant to the task in mind; don't dump the full list
 on the user. Before styling a widget, filter the contract for its variables
@@ -95,7 +116,7 @@ Rules:
   first look up the matching variable in the contract: `--pobo-global-*` for
   cross-widget tokens (colors, fonts, radii), then
   `--pobo-widget-{block}-{property}` for the specific widget (including `-before-*` /
-  `-after-*` pseudo-element variants). Override it on `:root`. Write a direct
+  `-after-*` pseudo-element variants). Override it on `:root #pobo-all-content`. Write a direct
   `.widget-*` rule **only after confirming the contract has no variable** for that
   exact property — and scope it as narrowly as possible.
 
@@ -103,8 +124,8 @@ Rules:
   // BAD — bypasses the contract, fragile against Pobo updates
   .widget-infobox { background: #f5f0ea; border-radius: 12px; }
 
-  // GOOD — overrides the contract variables
-  :root {
+  // GOOD — overrides the variables, with the specificity that wins the cascade
+  :root #pobo-all-content {
     --pobo-widget-infobox-bg: #f5f0ea;
     --pobo-widget-infobox-border-radius: 12px;
   }
@@ -123,11 +144,20 @@ Rules:
   protocol-relative `//host/...` URL, or a non-image `data:` URI is rejected.
   The server rejects all of this (the blacklist also catches CSS-escape
   obfuscation), so don't produce it in the first place. For fonts, set
-  font-family variables to font names — never `@import` a font.
+  font-family variables to font names — never `@import` a font. Only families
+  the eshop page already loads (or system fonts) will render; `runtime.md`
+  says how to read them from the fetched HTML.
 - CSS only — no JavaScript assets, no widget/content management (out of scope).
 - Max 256 KB of SCSS.
 
 ### 6. Push
+
+**One asset per e-shop.** Call `list_asset` first. If an AI asset already exists,
+another skill or an earlier session wrote it, and your push replaces it in full.
+Tell the user what is there (name, size, date) and ask before replacing. To keep
+what it does, read the deployed CSS from the `<link href="https://image.pobo.space/templates/…css">`
+in the fetched page HTML (`runtime.md`, "Reading the deployed asset") and carry
+its rules into your file.
 
 Call `push_asset_css` with `eshop_id`, a descriptive `name` shown to the merchant in
 the Pobo Page Builder admin (e.g. "AI design unification"), and the complete `scss`.
@@ -155,10 +185,10 @@ complete file again, screenshot again.
 - Finish by asking the user to confirm on their live e-shop (hard refresh,
   Ctrl/Cmd+Shift+R).
 
-**Cascade fallback:** if the user reports no visible change even though the push
-succeeded, the `:root` overrides may be losing the cascade against `generic.css` on
-some platforms. Increase specificity — use `:root:root { ... }` for the variable
-overrides, or as a last resort set the properties directly on the `.widget-*` blocks.
+**No visible change after a successful push:** the overrides are on plain `:root`
+and lose to `generic.css`, which loads later. Move them to `:root #pobo-all-content`
+(the default in step 5); `:root:root` is the next step up, direct `.widget-*` rules
+the last resort.
 
 ### 8. Rollback
 
