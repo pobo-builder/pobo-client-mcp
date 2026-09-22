@@ -179,7 +179,8 @@ the admin grid, so you can verify the result visually.
 
 ## What's in the plugin
 
-- `skills/style-widgets/` — the workflow for AI styling of widgets
+- `skills/style-widgets/` — the workflow for AI styling of widgets, plus the shared references `runtime.md` (what the CSS asset can do, where the theming variables live) and `widgets.md` (widget id → CSS block → variables → slots)
+- `skills/design-description/` — the workflow for designing one description (product, category or article) end to end from a short brief, matched to the eshop's own design: structure, copy, images and style; builds on `write-blog` and `style-widgets`
 - `skills/write-blog/` — the workflow for authoring and editing descriptions: blog articles, products and categories
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
 - `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
