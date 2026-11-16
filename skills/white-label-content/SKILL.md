@@ -1,6 +1,6 @@
 ---
 name: white-label-content
-description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "add this to all these products…", "rewrite it in every widget…", "find products that mention…", "copy content from product X to Y" or "undo that". Uses the `pobo-whitelabel` MCP server tools.
+description: Work with Pobo Page Builder content that lives on your own entities — find entities by id, name or the text inside them, add widgets and cards with your own products to one product or fifty at once, rewrite or remove them in bulk, copy content between entities, and undo any of it. For white label (B2B) e-shops whose products, categories and articles are identified by your own ids. Use when the user says "add this to all these products…", "rewrite it in every widget…", "find products that mention…", "copy content from product X to Y" or "undo that". Uses the `pobo-whitelabel` MCP server tools.
 ---
 
 # Work with white label entity content
@@ -93,6 +93,26 @@ get_entity_widget_catalog for the roles it takes.` and the whole write aborts.
 
 The text you send is written into **every language** the e-shop has. Per-language
 wording is not possible here; if the merchant needs it, that is admin work.
+
+## Product cards with your own products
+
+`add_entity_product_card` puts a block of cards with **your own** products onto
+one entity or up to 50 at once: `product_id` = your product ids in the order to
+show, 10 at most. `layout`: `carousel` (default), `single`, `grid`, or
+`card_left` / `card_right` — exactly one product next to a text column you write
+in `text` (`<h2>` heading and `<p>` paragraphs).
+
+Pobo does not hold your products and cannot check the ids. The cards are filled
+in the visitor's browser from the product endpoint set in Pobo (Integration →
+White label); an id your endpoint does not return is simply left out, so a typo
+shows only as a missing card — read the ids back to the user. When the answer
+says `product_endpoint_set: false`, no endpoint is set yet and the cards will not
+show until the merchant sets one; tell them.
+
+`edit_entity_product_card` changes which products a placed block shows — send the
+complete new list in order (add = current list + new id, remove = the list
+without it). The layout and the text stay; the text changes with
+`edit_entity_widget`. Both are versioned and undoable with `revert_entity`.
 
 ## Filling or composing a whole entity
 

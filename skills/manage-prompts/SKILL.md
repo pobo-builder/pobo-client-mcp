@@ -1,6 +1,6 @@
 ---
 name: manage-prompts
-description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (the brief) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "set up the generation prompt", "edit the description brief", "try out that prompt", "break down the client's requirements into the prompt", "what's in our prompt". Uses the `pobo` MCP server tools.
+description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (the brief) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, paid try-outs on 1–3 real products that write nothing to them, and starting the real generation when asked. Typical asks: "set up the generation prompt", "edit the description brief", "try out that prompt", "break down the client's requirements into the prompt", "what's in our prompt", "generate descriptions for these products". Uses the `pobo` MCP server tools.
 ---
 
 # Manage Pobo Page Builder AI generation prompts
@@ -98,38 +98,61 @@ the matching widget of the design and write one focused instruction per widget.
 
 ### 5. Test the prompt before you save it
 
-`preview_generation` dry-runs the prompt against 1–3 real products **without
-writing anything and without spending credits** — no widgets, no images, no
-generation history row. This is how you find out whether an edit to the
-general prompt actually produced better copy; guessing from the prompt text
-alone does not.
+`preview_generation` tries the prompt on 1–3 real products **exactly like a real
+generation** — text, SEO, AI photos, icons — but writes **nothing** to the
+products. This is how you find out whether an edit actually produced better copy;
+guessing from the prompt text alone does not.
 
-**It does not test per-widget instructions.** `preview_generation` only
-exercises the general `prompt` text and the generation settings below — it
-never applies the instructions set via `set_widget_prompt`, even if the
-profile already has some saved. There is no tool that previews per-widget
-instructions; judge their wording by re-reading it, not by previewing it.
+**It is paid, like a generation.** The first call only quotes the most it can
+cost and starts nothing. Tell the user the price, wait for an explicit yes, then
+repeat the call with the same settings plus `expected_credit` = the quote and
+`cost_confirmed: true`. Check `get_credit` first so you do not offer what the
+balance cannot cover. Only one try-out per e-shop runs at a time.
 
-- Pass `eshop_id`, `design_id`, `product_id` (1–3, from `find_product` or
-  `list_product`) and the `prompt` text you are testing. Optional generation
-  settings mirror the admin: `paragraph_length`, `generate_seo_meta`,
-  `generate_entity_name`, `generate_short_description`
-  (`never`/`when_missing`/`always`), `use_ai_profile`, `use_serp_context`,
-  `use_web_research`, `search_web`, `search_model`.
-- It returns one token per product. Poll them with `get_preview_status` —
-  status `pending` until the queue picks the job up, then `complete` with the
-  rendered `html` and any generated SEO fields. Tokens expire after 30 minutes.
-- Poll at a sensible pace: a preview runs the full research + generation
-  pipeline, so it takes tens of seconds, not one.
+- Pass `eshop_id`, `product_id` (1–3, from `find_product` or `list_product`) and
+  either `prompt_id` (the saved profile) or the `prompt` text you are testing —
+  `prompt` wins over the saved text, so you can test an edit that is not saved
+  anywhere yet. `design_id` overrides the template; without it the template of
+  `prompt_id` is used, without both a basic Pobo layout.
+- With `prompt_id`, the profile's **saved per-widget instructions are applied
+  too**, as in the real run. Instructions you have not saved yet are not — save
+  them with `set_widget_prompt` first, or judge their wording by re-reading it.
+- Optional settings mirror the admin: `paragraph_length`, `generate_seo_meta`,
+  `generate_entity_name`, `generate_image_variation`, `use_ai_profile`; research
+  (`use_serp_context`, `use_web_research`, `search_web`, `search_model`) only with
+  a template, and each research source is paid on its own.
+- Poll the token with `get_preview_status`: per product `pending`, `running`,
+  `complete` (rendered HTML, SEO fields, name, the credits it cost) or `failed`.
+  A preview runs the full pipeline, so it takes tens of seconds, not one. Try-outs
+  are kept 30 days.
 - Pick products that actually exercise the prompt — if the brief is about
-  material and sizing, preview a product that has both.
+  material and sizing, preview a product that has both. Start with one product;
+  add more only when the first one looks right.
 
-Loop prompt → preview → prompt as many times as it takes, and call
-`update_prompt` / `set_widget_prompt` only once the output is right. Note that
-`preview_generation` takes the prompt as text, so you can test an edit that is
-not saved anywhere yet.
+Loop prompt → preview → prompt, but count the cost: each round is paid. Call
+`update_prompt` / `set_widget_prompt` once the output is right.
 
-### 6. Report
+### 6. Run the real generation (only when asked)
+
+`start_generation` generates descriptions for up to 500 products with a prompt
+and **writes them into the products** (as drafts, waiting for approval). It needs
+the PROFI plan or higher; a `custom` prompt or one with a design needs SAAS.
+
+- First call with `product_id` and `prompt_id` (omit it for the one used last):
+  it prepares the batch and returns `generation_id`, the price and the products
+  that lack data for a good description. Report all three.
+- Second call with `generation_id` and `cost_confirmed: true` — only after the
+  user agreed to the price.
+- Follow it with `get_generation_status` (`wait` up to 60 s): generated, running,
+  skipped. `list_generation` / `get_generation` show one product's run.
+- Category descriptions: `entity_type: "category"` with `category_id` and a prompt
+  whose template is for categories (`list_prompt`: `for_category: true`). Products
+  never use such a prompt.
+
+Do not start a generation just to test a prompt — that is what the preview is for.
+The generated products are drafts; to put them live see `publish-content`.
+
+### 7. Report
 
 Summarize for the user:
 
@@ -137,11 +160,9 @@ Summarize for the user:
   "5 of 8 widgets have an explicit instruction"),
 - if the prompt text was overwritten, note that previous versions remain
   available in the history,
-- what the preview looked like, if you ran one (previews cost nothing, so
-  there is no reason to report them as an expense),
-- that the real generation is started in the Pobo Page Builder admin (product
-  grid → select products → pick this profile) — previewing is available here,
-  triggering the real run deliberately is not.
+- what the preview looked like and what it cost, if you ran one,
+- if you started a generation: how many products, the price, and that the results
+  wait for approval as drafts.
 
 ### Rollback
 
@@ -170,25 +191,24 @@ All tools return human-readable MCP errors — read them and react. Common ones:
   to a different design; re-check with `list_design_widget`.
 - `Nothing to update…` — `update_prompt` needs at least one field to change.
 - `AI content generation is temporarily unavailable. Try again later.` —
-  Pobo has AI generation switched off (outage or maintenance). Previews are
-  blocked for everyone; prompt edits still work. Tell the user to try the
-  preview later rather than retrying in a loop.
+  Pobo has AI generation switched off (outage or maintenance). Previews and
+  generations are blocked for everyone; prompt edits still work. Tell the user to
+  try later rather than retrying in a loop.
+- A refusal that names the plan — AI generation needs PROFI or higher, an
+  extended template (custom prompt or a design) SAAS. Tell the user; do not try to
+  get around it with another prompt.
 - `Design does not belong to this eshop.` — preview needs a design the e-shop
   can use; re-run `list_design`.
 - `Product does not belong to this eshop.` — comes back per product inside an
   otherwise successful preview call, not as a whole-call error; the other
   products still queued.
-- `not_found` from `get_preview_status` — the token expired (30 min), never
-  existed, or belongs to a different e-shop. Re-run `preview_generation`.
+- `not_found` from `get_preview_status` — the token never existed, is older
+  than the 30 days try-outs are kept, or belongs to a different e-shop.
 - 401 — see Prerequisites & auth above.
 
 ## Out of scope
 
-- Triggering the real generation — previews are here, the real run is started
-  in the Pobo admin. That is deliberate: unlike a preview it spends credits and
-  overwrites live content.
-- Checking credits before a preview — previews are free. (`get_credit` exists
-  for the paid tools, e.g. blog generation.)
+- Uploading generated content to the e-shop — `publish-content`.
 - Generation settings other than name/prompt/design/icon category (section
   counts, image flow, translations, …) — managed in the Pobo admin UI.
 - Pobo gallery prompt templates — read-only, not accessible here.

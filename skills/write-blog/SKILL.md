@@ -55,6 +55,19 @@ they arrive from the shop platform, so resolve them with `list_product` /
 `find_product` / `list_category`. A blog article is the one entity you may
 create yourself.
 
+**Read the facts before you write.** `get_eshop_ai_profile` is how the e-shop
+wants to sound (audience, tone, preferred and forbidden phrases, delivery and
+return terms) and which facts hold for the whole shop — follow it; a blank field
+means unknown, never guess it. For a product, `get_product` returns everything the
+shop knows (parameters, variants, photos); when it has no description and few
+parameters, `research_product` finds facts on the web (1 credit per provider that
+found something — say so first). Write no product fact that is not in one of them.
+
+**Say why.** Every write takes an optional `reason` — one sentence the merchant
+reads in the overview of agent changes ("the description did not say which car
+models the mat fits"). Fill it in; an unexplained change is the first thing a
+merchant reverts.
+
 `get_content_widget_catalog` is the step people skip and then guess. It returns
 the widget templates this e-shop actually has, and for each one its content
 roles — the named slots you fill (`role`, `hint`, `max_length`, `image_slot`,
@@ -124,9 +137,14 @@ wrong widget.
   them; that is not a bug, it is the tool declining to write a value the next
   import would overwrite. In practice most e-shops cannot write SEO fields here.
 - `add_content_product_carousel` inserts **real products** from the shop,
-  addressed by `product_id[]` and/or `product_url[]` (at most 10 each). Prefer
-  this over writing product names into prose — the carousel stays correct when
-  prices and stock change.
+  addressed by `product_id[]` and/or `product_url[]` (at most 10 together). Prefer
+  this over writing product names into prose — names, prices, photos and links
+  come from the shop and stay live. `layout` picks the shape: `carousel`
+  (default), `single` (one large card per product, best for 1–3), `grid`, or
+  `card_left` / `card_right` — exactly one product next to a text column you
+  write in `text` (`<h2>` + `<p>`). `edit_content_product_card` changes the
+  products of a block already placed — send the complete new list in order; to
+  change the layout, remove the block and add it again.
 - `list_content_image` is the entity's picture library and `import_content_image`
   copies one in from a public https address; `set_content_widget_image` fills the
   slots, and `convert_content_widget` turns a widget into another template of the
@@ -180,6 +198,11 @@ the balance cannot cover.
 you are done — an unfilled role renders as a gap on the live page. A Shoptet
 **product** over 65 000 bytes takes no further content at all, and the report is
 where you see that coming.
+
+For products that should go live, `check_content` is the gate the upload uses:
+the same rules plus a review of facts, spelling and filler (2 credits per
+product). Run it, fix what it reports, and hand over to `publish-content` — an
+upload refuses a product that failed it or changed since.
 
 ### 7. Undo
 
@@ -238,9 +261,11 @@ The widgets give the article its shape; you still have to make it worth reading.
 
 ## Out of scope
 
-- Publishing / visibility scheduling and platform sync — done in the Pobo admin.
-- Product descriptions — that is the generation prompt workflow
-  (`manage-prompts`), not blog authoring.
+- Uploading products to the e-shop — `publish-content`. Categories and blog
+  articles are exported by the merchant from the Pobo admin, as is visibility
+  scheduling.
+- Generating many product descriptions with a prompt — `manage-prompts`. Writing
+  one description yourself is this skill.
 - Styling of the rendered widgets — that is `style-widgets`.
 - The in-app Pobo chat assistant — you are the agent here; there is no reason to
   call another one.

@@ -38,7 +38,9 @@ coexist without conflict.
 
 Everything except white label bulk content editing: writing the description of a
 product, a category or a blog article, styling, product labeling and status,
-prompt management, diagnostics and analytics.
+uploading content to the eshop, content and translation checks, A/B tests,
+prompt management, generation, automation, diagnostics and analytics — and, on
+eshops running on Pobo's own storefront, orders, stock, price lists and branches.
 Run this once in your terminal:
 
 ```
@@ -105,10 +107,12 @@ Or refine your generation prompts:
 
 Claude creates (or updates) the prompt profile, links the design template, and
 pins each requirement to the right widget as an explicit per-widget instruction.
-Before saving, it can dry-run the prompt against a couple of real products and
-show you the rendered result — that costs nothing and writes nothing, so you can
-iterate until the copy is right. You then run the real generation from the Pobo
-Page Builder admin as usual.
+Before saving, it can try the prompt out on a couple of real products and show
+you the rendered result without writing anything to them. A try-out is paid like a
+generation, so Claude quotes the price first and starts it only after you agree.
+When the copy is right, Claude can also start the real generation for you — again
+only after you confirmed the price — or you run it from the Pobo Page Builder
+admin as usual.
 
 Or confirm a finished batch:
 
@@ -161,6 +165,35 @@ copy content from one product to others. Removing asks twice: the first call onl
 shows what would go. Every batch comes back with a `batch_id`, so one call takes
 the whole run back if you change your mind.
 
+### More you can ask for
+
+The merchant server covers most of what the Pobo administration does. A few
+examples of what else works:
+
+- **Upload to the eshop** — "check these ten descriptions and upload them":
+  Claude runs the quality check (rules, facts, spelling) first and uploads only
+  what passed.
+- **Content check and fixes** — "check all product descriptions for health
+  claims": a catalogue-wide check against your own rules, then a fix that
+  rewrites only the quoted words and leaves the products as drafts. Paid; Claude
+  always quotes the price first.
+- **Translations** — find what is missing or stale in each language, run the AI
+  translation check and translate exactly what is wrong.
+- **A/B tests** — prepare a test of the new description against the old one,
+  start it and read the result (measured by add to cart).
+- **Catalogue sync** — download the catalogue from the eshop again, see when it
+  last ran, and follow uploads.
+- **Pobo's agent** — start the agent on a few products and review what it left as
+  drafts; every change any agent made is listed with its reason.
+- **Plans and credits** — what the eshop's plan includes, the balance, where the
+  credits went, and moving paid credits between your eshops.
+- **Pobo storefront** (eshops on Pobo's own platform) — read orders, reservations
+  and sales, maintain products, prices and stock, prepare stock documents as
+  drafts, and manage branches, their teams and the virtual try-on add-on.
+
+Anything paid is quoted first and runs only after you confirm the price. See
+[`TOOLS.md`](TOOLS.md) for every tool.
+
 ### Filtering products
 
 Claude can filter products with the same filters as the Pobo Page Builder admin
@@ -182,9 +215,12 @@ the admin grid, so you can verify the result visually.
 - `skills/style-widgets/` — the workflow for AI styling of widgets, plus the shared references `runtime.md` (what the CSS asset can do, where the theming variables live) and `widgets.md` (widget id → CSS block → variables → slots)
 - `skills/design-description/` — the workflow for designing one description (product, category or article) end to end from a short brief, matched to the eshop's own design: structure, copy, images and style; builds on `write-blog` and `style-widgets`
 - `skills/write-blog/` — the workflow for authoring and editing descriptions: blog articles, products and categories
+- `skills/publish-content/` — the workflow for checking finished product descriptions and uploading them to the e-shop
+- `skills/check-content/` — the workflow for a catalogue-wide content check against the merchant's own rules, the fix of its findings and the recheck
+- `skills/fix-translations/` — the workflow for finding missing, stale or wrong translations, the AI translation check and translating exactly what is wrong
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
 - `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
-- `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
+- `skills/manage-prompts/` — the workflow for managing AI generation prompt profiles, trying them out on a few products and starting the real generation
 - `skills/manage-automation/` — the workflow for scheduled nightly description automation: create, preview, pause/resume, run history
 - `skills/diagnose-content/` — the workflow for finding out why a generated description is missing something
 - `skills/product-analytics/` — the workflow for reading how a description performs after it went live

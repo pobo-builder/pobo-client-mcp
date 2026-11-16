@@ -102,7 +102,12 @@ Summarize for the user:
 - how many products were switched and to which status,
 - which ids were skipped as not switchable (`review`/`generate`) or not found,
 - that the batch is now filterable by status in the Pobo Page Builder admin
-  product grid (see below), and — for `ready` — prepared for the next export.
+  product grid (see below), and — for `ready` — prepared for export.
+
+`ready` does not put anything on the e-shop by itself. If the user wants the
+approved batch live now, offer the upload: `publish-content` checks the products
+(`check_content`) and uploads them with `push_product`. Otherwise the merchant
+exports them from the Pobo admin.
 
 ## Filtering products (list_product = the admin grid filters)
 
@@ -129,6 +134,11 @@ sees on screen there; the English meaning follows in parentheses:
 | `is_visible` | `all` / `visible` / `hidden` | Viditelnost (visibility) |
 | `limit`, `page` | max 100 per page, 1-based | pagination |
 
+`list_product` has more filters than this table — content state, shared
+description, AI visibility, content check findings and the translation check
+(`translation`, `translation_lang`). The tool's own parameter list is the full
+reference (see `TOOLS.md`).
+
 When the user names a category ("drafts in Massage Tools"), resolve the name
 to an id first with `list_category` (`query` full-text search; returns id,
 name, url, status, has_content, product_count), then pass the id to
@@ -145,8 +155,8 @@ the user the `total` you are about to switch.
 
 The typical copywriting loop: label the client's batch (`label-products`) →
 generate/edit content → the client approves → `list_product` (label +
-`waiting_for_approval`) → this skill switches the batch to `ready` → export
-picks it up. The same filters are available to the user in the admin grid,
+`waiting_for_approval`) → this skill switches the batch to `ready` → the
+upload (`publish-content`, or an export from the admin) puts it on the e-shop. The same filters are available to the user in the admin grid,
 so they can verify the result visually.
 
 ## Error handling
@@ -165,7 +175,7 @@ All tools return human-readable MCP errors — read them and react. Common ones:
 ## Out of scope
 
 - Setting `review` or `generate` — those states are owned by other flows.
-- Running the export itself — exports are triggered from the Pobo admin.
+- Uploading to the e-shop — that is `publish-content` (the step after this one).
 - Creating or editing products/content — see the other skills.
 - Labeling — that is the `label-products` skill (typically the step before
   this one).

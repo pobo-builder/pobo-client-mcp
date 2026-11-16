@@ -1,13 +1,15 @@
 ---
 name: diagnose-content
-description: Find out why a generated Pobo Page Builder product description is missing something, came out wrong, or is not visible on the e-shop. Use when the user complains about generated content — "why is the dosage missing from the description", "it generated badly", "why isn't it on the e-shop", "the change never went through" — or asks what the AI actually found out about a product. Reads the generation runs, the web research behind them and the export that follows. Uses the `pobo` MCP server tools.
+description: Find out why a generated Pobo Page Builder product description is missing something, came out wrong, or is not visible on the e-shop. Use when the user complains about generated content — "why is the dosage missing from the description", "it generated badly", "why isn't it on the e-shop", "the change never went through" — or asks what the AI actually found out about a product. Reads the generation runs, the web research behind them, the upload to the e-shop and the download from it. Uses the `pobo` MCP server tools.
 ---
 
 # Diagnose a Pobo Page Builder product description
 
 You explain why a generated product description turned out the way it did.
 Everything here is read-only — you inspect generation runs, the web research
-behind them and the export that follows. Nothing you do changes content.
+behind them, the upload to the e-shop and the download from it. Nothing you do
+changes content; the one call that starts something, `start_import`, needs the
+user's yes.
 
 Communicate with the user in their language (typically Czech).
 
@@ -107,6 +109,24 @@ about the product in general.
   latest row has no `failed_at` and `is_running: true` is it genuinely still
   in flight and worth waiting for.
 - No recent export at all, and the product is `ready` → nobody started one.
+- The upload was started by an agent (`push_product`) — `get_push_status` with
+  its token (kept 30 minutes) says per product `ok`, `failed` (with the platform
+  message), `skipped` (`no_content`, or `not_approved` = still a draft) or
+  `not_found`. An `ok` product lists in `untranslated_lang` the languages that
+  stayed out because they are not translated — the shop keeps its old text there.
+- A product refused by `push_product` (`refused`) failed `check_content`, was
+  never checked, or changed since the check — the content is waiting in Pobo, not
+  lost. `publish-content` takes it from there.
+
+### 4. The other direction — is the product in Pobo at all?
+
+When the complaint is "the new product / the changed price is not in Pobo",
+the problem is the download from the platform, not the export.
+`get_import_status` says when Pobo last downloaded the catalogue, whether it
+failed (a failed download changed nothing) and `last_complete_at`. `start_import`
+downloads again — free, never uploads, but **ask before you start it**: on a large
+catalogue it takes minutes. It does not apply to `pobo` and `b2b` e-shops, whose
+catalogue lives in Pobo.
 
 ## Reading the states honestly
 
@@ -138,7 +158,7 @@ run, it does not measure performance. That is the `product-analytics` skill.
 
 ## Reporting to the user
 
-Say which of the three questions failed, in one sentence, before any detail.
+Say which of the questions failed, in one sentence, before any detail.
 "The research never found it" and "it was never in the brief" lead to
 completely different fixes, and the user needs the difference more than they
 need the payloads.
@@ -156,4 +176,6 @@ too; do not send the user off to rewrite a prompt that was already correct.
   approving content is `confirm-products`, styling is `style-widgets`.
 - Performance of a description (views, add-to-cart) — that is
   `product-analytics`.
-- Re-running an export or a generation — both are started in the Pobo admin.
+- Re-running a failed export from the admin — the merchant does that there.
+  Uploading products again is `publish-content`, a new generation
+  `manage-prompts`; both change things, so this skill only points to them.
