@@ -60,7 +60,12 @@ In parallel where possible:
 - `list_eshop` (check `pobo_llm_enabled`), then `find_product` / `list_category` /
   `list_blog` → `entity_type` + `entity_id`.
 - `get_platform_content` → the facts the shop already states. Carry facts over,
-  never wording.
+  never wording. For a product, `get_product` adds parameters, variants and
+  photos; `research_product` finds facts on the web when there are few (paid,
+  ask first).
+- `get_eshop_ai_profile` → audience, tone, preferred and forbidden phrases, and
+  facts true for the whole shop. Follow it; blank fields are unknown, not
+  invitations to guess.
 - `get_content_widget` → what the entity holds now; say before the compose that it
   will be replaced.
 - `list_content_image`, `list_content_media` → the merchant's own photos, with
@@ -83,8 +88,11 @@ unless the brief is ambiguous about the entity, the audience or the language.
 ### 3. Content
 
 Write the copy inside each role's `max_length`, then `compose_content` once with
-the whole `widget` array plus `image` and `icon` URLs. `mode: "replace"` returns a
-preview and a `confirm_token`; repeat with `confirmed: true`.
+the whole `widget` array plus `image` and `icon` URLs and a `reason` the
+merchant will read in the overview of agent changes. `mode: "replace"` returns a
+preview and a `confirm_token`; repeat with `confirmed: true`. Products go in as
+live cards with `add_content_product_carousel` (`layout`: carousel, single, grid,
+or `card_left` / `card_right` next to your own text), never as names in prose.
 
 ### 4. Structural QA (text only)
 
@@ -98,7 +106,9 @@ the rest yourself in the returned HTML:
   the description cannot.
 - Text over `max_length` → shorten.
 
-Fix with `edit_content_widget`. No screenshots yet.
+Fix with `edit_content_widget`. For a product, finish with `check_content`
+(rules, facts, spelling and filler; 2 credits) — the upload refuses a product that
+failed it. No screenshots yet.
 
 ### 5. Style
 
@@ -115,6 +125,13 @@ these differences:
 
 ### 6. Visual QA
 
+The style is live as soon as it is pushed, but **the new description is not** —
+the shop shows it only after upload. For a product, ask the user whether it may
+go live and upload it (`publish-content`); categories and articles are exported by
+the merchant from the Pobo admin. Until then, judge the style on a page that
+already shows Pobo content of the same widgets, or on the HTML from
+`render_content_html`, and say so.
+
 `screenshot_eshop_page` with the entity `path` and `selector: "#pobo-all-content"`,
 desktop then `viewport: "mobile"`. Check: font fallback (a face you did not ask
 for means a wrong family name or one the host does not load), the page reading
@@ -125,7 +142,8 @@ fixes were large. Share the screenshot CDN URLs.
 ### 7. Report
 
 Entity URL, tokens matched, the plan executed, what the style asset now covers
-(this entity or the whole shop), what you left out, screenshot URLs. Everything
+(this entity or the whole shop), what you left out, whether the description is
+live or still waiting for upload, screenshot URLs. Everything
 is versioned: `revert_content` and `delete_asset` undo it.
 
 ## Error handling
